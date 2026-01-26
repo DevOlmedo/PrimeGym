@@ -5,15 +5,10 @@ import ui.VentanaLogin;
 public class Main {
     static void main(String[] args) {
 
-        // Por ahora solo lanzamos el login para ver cómo queda el diseño
         VentanaLogin login = new VentanaLogin();
         login.setVisible(true);
 
     }
-
-
-
-
 
     /*static void main(String[] args) {
 

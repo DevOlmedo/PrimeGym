@@ -19,7 +19,6 @@ public class ControlAcceso {
         } else {
             System.out.println("¡Bienvenido " + socio.getNombre() + "!");
 
-            // Aquí detectamos si está en los últimos 3 días antes de vencer
             if (diasPasados >= -7 && diasPasados < 0) {
                 System.out.println("⚠️ ¡Atención! Tu cuota vence en " + Math.abs(diasPasados) + " días.");
             } else if (diasPasados == 0) {

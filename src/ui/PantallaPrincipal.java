@@ -11,6 +11,7 @@ public class PantallaPrincipal extends JFrame {
     private String usuarioLogueado;
 
     // Atributos para el buscador y carnet 🔍
+
     private JTextField txtBusqueda;
     private JButton btnBuscar;
     private JPanel panelCarnet;
@@ -18,27 +19,29 @@ public class PantallaPrincipal extends JFrame {
     private JLabel lblDatosSocio;
     private JLabel lblEstadoCuota;
 
-    private ControlAcceso control; // Atributo nuevo
+    private ControlAcceso control;
 
     public PantallaPrincipal(String usuario, ControlAcceso control) {
         this.usuarioLogueado = usuario;
         this.control = control;
 
         // 1. Configuraciones de la ventana
+
         setTitle("PrimeGym - Panel de Control");
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
         setResizable(false);
-        setLocationRelativeTo(null); // Esto la centra en la pantalla
+        setLocationRelativeTo(null); // Esto lo centra en la pantalla
 
         // 2. Inicialización y agregado de componentes
-        // Asegúrate de que estas funciones se llamen ANTES del setVisible
+
         add(crearBarraSuperior(), BorderLayout.NORTH);
         add(crearMenuLateral(), BorderLayout.WEST);
         add(crearPanelCentral(), BorderLayout.CENTER);
 
-        // 3. REFRESCAR Y MOSTRAR (El orden es vital) ✨
+        // 3. REFRESCAR Y MOSTRAR ✨
+
         this.revalidate();
         this.repaint();
         this.setVisible(true);
@@ -58,21 +61,22 @@ public class PantallaPrincipal extends JFrame {
     }
 
     private JPanel crearBarraSuperior() {
+
         // 1. Panel principal con BorderLayout
+
         JPanel panelBarra = new JPanel(new BorderLayout());
         panelBarra.setBackground(new Color(20, 20, 20));
         panelBarra.setPreferredSize(new Dimension(0, 60));
 
-        // --- LÍNEA DIVISORIA INFERIOR (ESTILO CONTROL FIT) --- ⚪
-        // Usamos un gris claro (200, 200, 200) para que parezca blanco pero no sea chillón
-        // MatteBorder(arriba, izquierda, abajo, derecha, color)
+        // --- LÍNEA DIVISORIA INFERIOR --- ⚪
+
         panelBarra.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(200, 200, 200)));
 
         // --- LADO IZQUIERDO: LOGO --- 🏛️
+
         JLabel lblLogoTop = new JLabel();
         try {
             ImageIcon iconoOriginal = new ImageIcon("src/assets/logorojo.png");
-            // Ajustamos el escalado para que no deforme la barra (140x40 es un buen estándar)
             Image imgEscalada = iconoOriginal.getImage().getScaledInstance(140, 40, Image.SCALE_SMOOTH);
             lblLogoTop.setIcon(new ImageIcon(imgEscalada));
         } catch (Exception e) {
@@ -83,25 +87,30 @@ public class PantallaPrincipal extends JFrame {
         }
 
         // Margen interno para el logo (separación del borde izquierdo)
+
         lblLogoTop.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
         panelBarra.add(lblLogoTop, BorderLayout.WEST);
 
         // --- LADO DERECHO: INFO USUARIO Y SALIDA --- 👤
+
         JPanel panelUsuario = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 18));
         panelUsuario.setOpaque(false);
 
         // Nombre del Administrador
+
         JLabel lblNombre = new JLabel(usuarioLogueado.toUpperCase());
         lblNombre.setForeground(new Color(50, 205, 50)); // Verde Lima
         lblNombre.setFont(new Font("Segoe UI", Font.BOLD, 14));
 
         // Botón Cerrar Sesión
+
         JLabel lblCerrar = new JLabel("•  Cerrar sesión");
         lblCerrar.setForeground(Color.WHITE);
         lblCerrar.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblCerrar.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         // Lógica de interactividad y navegación
+
         lblCerrar.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -132,24 +141,26 @@ public class PantallaPrincipal extends JFrame {
         menu.setPreferredSize(new Dimension(240, 0));
 
         // --- LÍNEA DIVISORIA DERECHA --- ⚪
+
         menu.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(200, 200, 200)));
 
-        // 1. Espaciado inicial arriba
+        // Espaciado inicial arriba
+
         menu.add(Box.createRigidArea(new Dimension(0, 40)));
 
-        // 2. Definimos las opciones
+        // Navegacion
+
         String[] opciones = {"Acceso", "Socios", "Actividades", "Instructores", "Caja", "Estadísticas", "Whatsapp"};
 
         for (String texto : opciones) {
+
             // --- LÓGICA DE ICONO DINÁMICO --- 🖼️
-            // Convertimos el texto a minúsculas para que coincida con tus archivos (ej: "acceso.png")
+
             String nombreArchivo = texto.toLowerCase() + ".png";
             String rutaIcono = "src/assets/" + nombreArchivo;
 
-            // Llamamos al método pasándole la ruta específica de cada botón
             JButton btn = crearBotonMenu(" " + texto, rutaIcono);
 
-            // --- MANTENEMOS TAMAÑO PARA EVITAR TITILEO --- 🛠️
             btn.setMinimumSize(new Dimension(240, 55));
             btn.setPreferredSize(new Dimension(240, 55));
             btn.setMaximumSize(new Dimension(240, 55));
@@ -157,10 +168,11 @@ public class PantallaPrincipal extends JFrame {
             menu.add(btn);
 
             // Separación vertical entre botones
+
             menu.add(Box.createRigidArea(new Dimension(0, 15)));
         }
 
-        // 3. Empujamos todo hacia arriba
+        // Empuja todo para arriba
         menu.add(Box.createVerticalGlue());
 
         return menu;
@@ -174,6 +186,7 @@ public class PantallaPrincipal extends JFrame {
         gbc.gridx = 0;
 
         // 1. Título 🏛️
+
         JLabel lblTitulo = new JLabel("CONTROL DE ACCESO");
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 28)); // Un poco más grande
         lblTitulo.setForeground(Color.WHITE);
@@ -181,21 +194,26 @@ public class PantallaPrincipal extends JFrame {
         panelPrincipalCentro.add(lblTitulo, gbc);
 
         // 2. Buscador Estilizado 🔍
+
         JPanel panelBuscador = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
         panelBuscador.setOpaque(false);
 
         // Campo de texto: Estilo "Línea"
+
         txtBusqueda = new JTextField(20);
         txtBusqueda.setPreferredSize(new Dimension(350, 45));
         txtBusqueda.setFont(new Font("Segoe UI", Font.PLAIN, 18));
         txtBusqueda.setBackground(new Color(30, 30, 30));
         txtBusqueda.setForeground(Color.WHITE);
         txtBusqueda.setCaretColor(Color.WHITE);
-        // Solo borde inferior rojo de 2px
+
+        // Solo borde inferior
+
         txtBusqueda.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(200, 0, 0)));
         txtBusqueda.setToolTipText("Ingrese DNI del socio");
 
-        // 2. Botón Verificar: Estilo Moderno Redondeado 🔴
+        // Botón Verificar
+
         btnBuscar = new JButton("VERIFICAR") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -211,7 +229,6 @@ public class PantallaPrincipal extends JFrame {
                     g2.setColor(new Color(180, 0, 0)); // Rojo base
                 }
 
-                // Dibujamos el fondo redondeado (arco de 15px)
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
                 g2.dispose();
                 super.paintComponent(g);
@@ -224,6 +241,7 @@ public class PantallaPrincipal extends JFrame {
         btnBuscar.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         // Configuraciones necesarias para el botón personalizado
+
         btnBuscar.setContentAreaFilled(false);
         btnBuscar.setFocusPainted(false);
         btnBuscar.setBorderPainted(false);
@@ -235,17 +253,20 @@ public class PantallaPrincipal extends JFrame {
         gbc.gridy = 1;
         panelPrincipalCentro.add(panelBuscador, gbc);
 
-        // 3. El Carnet 🪪
+        // 3. El Carnet
+
         panelCarnet = construirPanelCarnet();
         gbc.gridy = 2;
         panelPrincipalCentro.add(panelCarnet, gbc);
 
         // --- LÓGICA DE INTEGRACIÓN DINÁMICA --- ⚡
+
         btnBuscar.addActionListener(e -> {
             try {
                 String dni = txtBusqueda.getText();
 
-                // Simulación de socio (A futuro esto vendrá de una base de datos)
+                // Simulación de socio
+
                 Socio socioPrueba = new Socio("RIQUELME ANA", dni, java.time.LocalDate.now().plusDays(10));
 
                 this.control.verificarIngreso(socioPrueba);
@@ -283,17 +304,20 @@ public class PantallaPrincipal extends JFrame {
         carnet.setVisible(false); // Sigue empezando oculto 🕵️
 
         // Foto 📷
+
         lblFotoSocio = new JLabel("FOTO", SwingConstants.CENTER);
         lblFotoSocio.setPreferredSize(new Dimension(180, 0));
         lblFotoSocio.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.GRAY));
         lblFotoSocio.setForeground(Color.LIGHT_GRAY);
         carnet.add(lblFotoSocio, BorderLayout.WEST);
 
-        // Datos 📝 (Ahora empezamos con un componente listo para ser llenado)
+        // Datos 📝
+
         lblDatosSocio = new JLabel();
         carnet.add(lblDatosSocio, BorderLayout.CENTER);
 
         // Franja de Estado 🟥/🟩
+
         lblEstadoCuota = new JLabel("", SwingConstants.CENTER); // Empezamos sin texto
         lblEstadoCuota.setOpaque(true);
         lblEstadoCuota.setFont(new Font("Segoe UI", Font.BOLD, 20));
@@ -306,7 +330,8 @@ public class PantallaPrincipal extends JFrame {
     private JButton crearBotonMenu(String texto, String rutaIcono) {
         JButton boton = new JButton(texto);
 
-        // 1. Configuración de Estilo Base
+        // Configuración de Estilo Base
+
         boton.setAlignmentX(Component.CENTER_ALIGNMENT);
         boton.setMaximumSize(new Dimension(200, 60));
         boton.setHorizontalAlignment(SwingConstants.LEFT);
@@ -314,6 +339,7 @@ public class PantallaPrincipal extends JFrame {
         boton.setIconTextGap(15);
 
         // Colores y Fuentes iniciales
+
         Color colorOriginal = Color.WHITE;
         Color colorHover = new Color(200, 0, 0); // Rojo PrimeGym
         Font fuenteOriginal = new Font("Segoe UI", Font.BOLD, 18);
@@ -322,14 +348,16 @@ public class PantallaPrincipal extends JFrame {
         boton.setForeground(colorOriginal);
         boton.setFont(fuenteOriginal);
 
-        // 2. Transparencia y Limpieza visual
+        // Transparencia y Limpieza visual
+
         boton.setContentAreaFilled(false);
         boton.setOpaque(false);
         boton.setFocusPainted(false);
         boton.setBorderPainted(false);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // 3. Efecto INTERACTIVO (Mouse Hover) 🖱️⚡
+        // Efecto INTERACTIVO (Mouse Hover)
+
         boton.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
@@ -344,11 +372,10 @@ public class PantallaPrincipal extends JFrame {
             }
         });
 
-        // 4. Gestión de Iconos
+        // Gestión de Iconos
 
         try {
             ImageIcon icono = new ImageIcon(rutaIcono);
-            // Escalamos el icono un poquito más (24x24) para que acompañe la letra grande
             Image img = icono.getImage().getScaledInstance(34, 34, Image.SCALE_SMOOTH);
             boton.setIcon(new ImageIcon(img));
         } catch (Exception e) {

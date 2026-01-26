@@ -32,20 +32,22 @@ public class VentanaAcceso extends JFrame {
 
     private void inicializarComponentes() {
 
-        // Configuramos la etiqueta
+        // Configuracion de la etiqueta
+
         etiquetaDni = new JLabel("DNI del Socio:");
         etiquetaDni.setForeground(Color.LIGHT_GRAY);
         etiquetaDni.setFont(new Font("Arial", Font.BOLD, 15));
 
-        // Configuramos el campo de texto
+        // Configuracion del campo de texto
+
         campoDni = new JTextField(15);
 
-        // Configuramos el botón
+        // Configuracion del botón
+
         botonVerificar = new JButton("Verificar");
         botonVerificar.setBackground(Color.DARK_GRAY);
         botonVerificar.setForeground(Color.WHITE);
 
-        // Agregamos todo al final
         add(etiquetaDni);
         add(campoDni);
         add(botonVerificar);
@@ -54,7 +56,6 @@ public class VentanaAcceso extends JFrame {
             try {
                 // 1. Tomamos el DNI del cuadro de texto
                 String dni = campoDni.getText();
-
                 // 2. Creamos un socio de prueba con ESE dni
                 // Le ponemos una fecha de vencimiento pasada para que salte el error
                 Socio socioPrueba = new Socio("Socio de Prueba", dni, LocalDate.now().plusDays(10));
