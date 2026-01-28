@@ -1,6 +1,9 @@
 package ui.pestañas;
 
 import model.Producto;
+import ui.dialogos.DialogoConfirmacion;
+import ui.dialogos.VentanaCargaProducto;
+
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
@@ -11,31 +14,130 @@ public class PanelMarket extends JPanel {
     private List<Producto> listaProductos;
 
     public PanelMarket() {
-        this.listaProductos = new ArrayList<>();
+        // CARGA DE DATOS
+        this.listaProductos = util.GestorArchivos.cargar();
+
         setLayout(new BorderLayout());
         setBackground(new Color(30, 30, 30));
 
-        // Título de la sección
+        // --- BLOQUE DEL BUSCADOR ---
+
+        // Panel superior que contendrá Título + Buscador
+        JPanel panelNorte = new JPanel();
+        panelNorte.setLayout(new BoxLayout(panelNorte, BoxLayout.Y_AXIS));
+        panelNorte.setOpaque(false);
+
+        // Título
 
         JLabel titulo = new JLabel("MARKET / STORE", SwingConstants.CENTER);
         titulo.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titulo.setForeground(Color.WHITE);
-        titulo.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
-        add(titulo, BorderLayout.NORTH);
+        titulo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        titulo.setBorder(BorderFactory.createEmptyBorder(20, 0, 10, 0));
 
-        // Panel donde irán las "cards"
+        // Campo de texto del buscador
+
+        JTextField txtBuscador = new JTextField();
+
+        // Tamaño: ancho de 500 y una altura de 40
+
+        txtBuscador.setPreferredSize(new Dimension(500, 40));
+        txtBuscador.setMinimumSize(new Dimension(500, 40));
+        txtBuscador.setMaximumSize(new Dimension(500, 40));
+
+        txtBuscador.setBackground(new Color(45, 45, 45));
+        txtBuscador.setForeground(Color.WHITE); // Texto en blanco
+        txtBuscador.setCaretColor(new Color(255, 140, 0)); // Cursor naranja
+
+        // Fuente: El tamaño de la fuente no puede ser mayor a la altura del campo
+
+        txtBuscador.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+
+        // Padding: Margen interno para que el texto no toque los bordes
+
+        txtBuscador.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 100, 100), 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15) // 15px de espacio a los lados
+        ));
+
+        // Panel para centrar el buscador horizontalmente
+
+        JPanel panelBarra = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        panelBarra.setOpaque(false);
+        JLabel lblIcono = new JLabel("🔍 "); // Un emoji simple o icono
+        lblIcono.setForeground(Color.GRAY);
+        panelBarra.add(lblIcono);
+        panelBarra.add(txtBuscador);
+
+        // Panel norte
+
+        panelNorte.add(titulo);
+        panelNorte.add(panelBarra);
+        panelNorte.add(Box.createVerticalStrut(15)); // Espacio antes de los productos
+
+        add(panelNorte, BorderLayout.NORTH);
+
+        // --- PANEL DE PRODUCTOS ---
 
         contenedorProductos = new JPanel(new FlowLayout(FlowLayout.LEFT, 25, 25));
         contenedorProductos.setBackground(new Color(30, 30, 30));
-
-        // Scroll para cuando haya muchos productos
 
         JScrollPane scroll = new JScrollPane(contenedorProductos);
         scroll.setBorder(null);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         add(scroll, BorderLayout.CENTER);
 
-        // Dibujamos el estado inicial (solo el botón +)
+        // --- LÓGICA DEL BUSCADOR (CON DEBOUNCING PARA EVITAR DELAY) ---
+
+        // Timer de 150ms.
+        // Solo ejecutará la búsqueda cuando el usuario deje de escribir por ese tiempo.
+
+        Timer timerBusqueda = new Timer(150, e -> {
+            String texto = txtBuscador.getText().toLowerCase().trim();
+
+            contenedorProductos.removeAll();
+
+            for (model.Producto p : listaProductos) {
+                // Filtramos por nombre
+
+                if (p.getNombre().toLowerCase().contains(texto)) {
+                    agregarProductoVisual(p);
+                }
+            }
+
+            // Solo mostramos el botón "+" si no estamos buscando nada
+
+            if (texto.isEmpty()) {
+                contenedorProductos.add(crearBotonAgregar());
+            }
+
+            contenedorProductos.revalidate();
+            contenedorProductos.repaint();
+        });
+
+        // Importante: que el timer no se repita solo
+
+        timerBusqueda.setRepeats(false);
+
+        txtBuscador.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { resetearTimer(); }
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { resetearTimer(); }
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { resetearTimer(); }
+
+            private void resetearTimer() {
+                // Cada vez que el usuario toca una tecla, reiniciamos la cuenta regresiva
+                if (timerBusqueda.isRunning()) {
+                    timerBusqueda.restart();
+                } else {
+                    timerBusqueda.start();
+                }
+            }
+        });
+
+        // 2. DIBUJAMOS EL ESTADO INICIAL
 
         refrescarPantalla();
     }
@@ -89,6 +191,7 @@ public class PanelMarket extends JPanel {
     private void agregarProductoVisual(Producto producto) {
 
         // Panel de la Card
+
         JPanel card = new JPanel(new BorderLayout(0, 0)) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -104,6 +207,7 @@ public class PanelMarket extends JPanel {
         card.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // Imagen
+
         JLabel lblImagen = new JLabel("", SwingConstants.CENTER);
         if (producto.getRutaImagen() != null && !producto.getRutaImagen().isEmpty()) {
             ImageIcon icon = new ImageIcon(producto.getRutaImagen());
@@ -124,15 +228,15 @@ public class PanelMarket extends JPanel {
         JLabel lblNombre = new JLabel(producto.getNombre());
         lblNombre.setFont(new Font("Segoe UI", Font.PLAIN, 18));
         lblNombre.setForeground(Color.WHITE);
-        lblNombre.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblNombre.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrado de componente
 
         // Descripción
 
-        JLabel lblDesc = new JLabel("<html><center>" + producto.getDescripcion() + "</center></html>");
+        JLabel lblDesc = new JLabel("<html><div style='text-align: center; width: 160px;'>" + producto.getDescripcion() + "</div></html>");
         lblDesc.setFont(new Font("Segoe UI", Font.ITALIC, 13));
         lblDesc.setForeground(new Color(180, 180, 180));
         lblDesc.setAlignmentX(Component.CENTER_ALIGNMENT);
-        lblDesc.setMaximumSize(new Dimension(180, 45));
+        lblDesc.setMaximumSize(new Dimension(190, 50));
 
         // Precio
 
@@ -142,9 +246,9 @@ public class PanelMarket extends JPanel {
         lblPrecio.setForeground(new Color(255, 140, 0));
         lblPrecio.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Distribución del espacio interno
+        // Distribución
 
-        infoCentral.add(Box.createVerticalStrut(8)); // Espacio corto después de la imagen
+        infoCentral.add(Box.createVerticalStrut(8));
         infoCentral.add(lblNombre);
         infoCentral.add(Box.createVerticalStrut(4));
         infoCentral.add(lblDesc);
@@ -153,7 +257,7 @@ public class PanelMarket extends JPanel {
 
         card.add(infoCentral, BorderLayout.CENTER);
 
-        // 4. Botones
+        // Botones
 
         JPanel panelAcciones = new JPanel(new GridLayout(1, 2, 10, 0));
         panelAcciones.setOpaque(false);
@@ -171,8 +275,19 @@ public class PanelMarket extends JPanel {
         });
 
         btnDelete.addActionListener(e -> {
-            int r = JOptionPane.showConfirmDialog(this, "¿Borrar?", "Confirmar", JOptionPane.YES_NO_OPTION);
-            if (r == JOptionPane.YES_OPTION) { listaProductos.remove(producto); refrescarPantalla(); }
+            Frame padre = (Frame) SwingUtilities.getWindowAncestor(this);
+
+            // Invocamos nuestro nuevo diálogo
+
+            DialogoConfirmacion dc = new DialogoConfirmacion(padre, "¿Estás seguro de que quieres eliminar este producto?");
+            dc.setVisible(true);
+
+            // Si el usuario marcó "ACEPTAR"
+
+            if (dc.getRespuesta()) {
+                listaProductos.remove(producto);
+                refrescarPantalla();
+            }
         });
 
         panelAcciones.add(btnEdit);
@@ -182,23 +297,65 @@ public class PanelMarket extends JPanel {
         contenedorProductos.add(card);
     }
 
-    private JButton crearBotonAccion(String texto, Color fondo) {
-        JButton btn = new JButton(texto);
+    private JButton crearBotonAccion(String texto, Color fondoBase) {
+        JButton btn = new JButton(texto) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Lógica de colores para Hover y Click
+
+                if (getModel().isPressed()) {
+                    g2.setColor(fondoBase.darker());
+                } else if (getModel().isRollover()) {
+                    g2.setColor(fondoBase.brighter()); // Se ilumina al pasar el mouse
+                } else {
+                    g2.setColor(fondoBase);
+                }
+
+                // fondo redondeado
+
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+
+        // Estilos para quitar el diseño por defecto de Java
+
         btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btn.setForeground(Color.WHITE);
-        btn.setBackground(fondo);
+        btn.setContentAreaFilled(false); // Importante para que no se vea el fondo cuadrado original
+        btn.setBorderPainted(false);
         btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
         return btn;
     }
 
     private void refrescarPantalla() {
+
+        // PERSISTENCIA: Antes de limpiar y redibujar la pantalla,
+        // listaProductos en el archivo JSON.
+
+        util.GestorArchivos.guardar(listaProductos);
+
+        // Limpia el contenedor para evitar duplicados al redibujar
         contenedorProductos.removeAll();
+
+        // Recorre la lista que cargamos (o modificamos) y creamos las cards visuales
+
         for (Producto p : listaProductos) {
             agregarProductoVisual(p);
         }
+
+        // Agregam siempre al final el botón "+" para cargar nuevos productos
+
         contenedorProductos.add(crearBotonAgregar());
+
+        // Avisamos a Swing que la interfaz cambió y debe refrescarse visualmente
+
         contenedorProductos.revalidate();
         contenedorProductos.repaint();
     }

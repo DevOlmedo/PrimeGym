@@ -1,4 +1,4 @@
-package ui.pestañas;
+package ui.dialogos;
 
 import model.Producto;
 import javax.swing.*;
