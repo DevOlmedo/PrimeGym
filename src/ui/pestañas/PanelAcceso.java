@@ -1,10 +1,10 @@
 package ui.pestañas;
 
-import logic.AccesoDenegadoException;
-import logic.ControlAcceso;
-import model.Socio;
+import dao.SocioDAO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 public class PanelAcceso extends JPanel {
     private JTextField txtBusqueda;
@@ -12,10 +12,9 @@ public class PanelAcceso extends JPanel {
     private JPanel panelCarnet;
     private JLabel lblDatosSocio;
     private JLabel lblEstadoCuota;
-    private ControlAcceso control;
+    private SocioDAO socioDAO = new SocioDAO();
 
-    public PanelAcceso(ControlAcceso control) {
-        this.control = control;
+    public PanelAcceso() {
         setLayout(new GridBagLayout());
         setBackground(new Color(30, 30, 30));
         inicializarComponentes();
@@ -42,10 +41,16 @@ public class PanelAcceso extends JPanel {
         txtBusqueda = new JTextField(20);
         txtBusqueda.setPreferredSize(new Dimension(350, 45));
         txtBusqueda.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-        txtBusqueda.setBackground(new Color(30, 30, 30));
+        txtBusqueda.setBackground(new Color(45, 45, 45));
         txtBusqueda.setForeground(Color.WHITE);
         txtBusqueda.setCaretColor(Color.WHITE);
         txtBusqueda.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(200, 0, 0)));
+        txtBusqueda.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) ejecutarBusqueda();
+            }
+        });
 
         btnBuscar = crearBotonEstilizado("VERIFICAR");
         panelBuscador.add(txtBusqueda);
@@ -54,75 +59,110 @@ public class PanelAcceso extends JPanel {
         gbc.gridy = 1;
         add(panelBuscador, gbc);
 
-        // 3. El Carnet
+        // El Carnet
+
         panelCarnet = construirPanelCarnet();
-        panelCarnet.setVisible(false); // Oculto al inicio
+        panelCarnet.setVisible(false);
         gbc.gridy = 2;
         add(panelCarnet, gbc);
 
-        // Lógica del botón
         btnBuscar.addActionListener(e -> ejecutarBusqueda());
     }
 
-    // --- MÉTODOS MUDADOS ---
-
     private void ejecutarBusqueda() {
+        String entrada = txtBusqueda.getText().trim();
+        if (entrada.isEmpty()) return;
+
         try {
-            String dni = txtBusqueda.getText();
-            // Por ahora usamos el socio de prueba, luego usaremos el buscador real
-            Socio socioPrueba = new Socio("RIQUELME ANA", dni, java.time.LocalDate.now().plusDays(10));
+            int dni = Integer.parseInt(entrada);
 
-            control.verificarIngreso(socioPrueba);
+            // Busca los datos reales en SQLite
 
-            String info = "<html><body style='color:white; padding:20px; font-family:Segoe UI;'>"
-                    + "<h1 style='margin:0; font-size:22px;'>" + socioPrueba.getNombre() + "</h1>"
-                    + "<p style='margin:10px 0 5px 0; font-size:16px; color:#CCCCCC;'>DNI: " + socioPrueba.getDni() + "</p>"
-                    + "<p style='margin:0; font-size:16px; color:#CCCCCC;'>Vencimiento: " + socioPrueba.getFechaVencimiento() + "</p>"
-                    + "</body></html>";
+            Object[] socio = socioDAO.buscarPorDni(dni);
 
-            lblDatosSocio.setText(info);
-            lblEstadoCuota.setText("CUOTA AL DÍA");
-            lblEstadoCuota.setBackground(new Color(0, 150, 0));
+            if (socio != null) {
+                String nombreCompleto = ((String) socio[1] + " " + (String) socio[2]).toUpperCase();
+                String plan = (String) socio[3];
+                String venc = (String) socio[4]; // Fecha de vencimiento
+                String estado = (String) socio[5];
 
-        } catch (AccesoDenegadoException ex) {
-            lblEstadoCuota.setText("CUOTA VENCIDA");
-            lblEstadoCuota.setBackground(new Color(180, 0, 0));
+                String info = "<html><body style='color:white; font-family:Segoe UI;'>"
+                        + "<div style='margin-left:10px;'>"
+                        + "<span style='font-size:18px; font-weight:bold; color:#FF8C00;'>" + nombreCompleto + "</span><br>"
+                        + "<span style='font-size:11px; color:#AAAAAA;'>FICHA DE SOCIO</span>"
+                        + "<div style='border-top: 1px solid #555; margin-top:5px; margin-bottom:10px; width:250px;'></div>"
+                        + "<table style='font-size:14px; color:#DDDDDD;'>"
+                        + "<tr><td><b>DNI:</b></td><td>&nbsp;&nbsp;" + dni + "</td></tr>"
+                        + "<tr><td style='padding-top:4px;'><b>Plan:</b></td><td style='padding-top:4px;'>&nbsp;&nbsp;" + plan + "</td></tr>"
+                        + "<tr><td style='padding-top:4px;'><b>Vence:</b></td><td style='padding-top:4px;'>&nbsp;&nbsp;" + venc + "</td></tr>"
+                        + "</table>"
+                        + "</div>"
+                        + "</body></html>";
+
+                lblDatosSocio.setText(info);
+
+                // Lógica de colores según el estado calculado en el DAO
+
+                if ("AL DÍA".equals(estado)) {
+                    lblEstadoCuota.setText("CUOTA AL DÍA - ACCESO PERMITIDO");
+                    lblEstadoCuota.setBackground(new Color(0, 150, 0)); // Verde
+                } else {
+                    lblEstadoCuota.setText("CUOTA VENCIDA - ACCESO DENEGADO");
+                    lblEstadoCuota.setBackground(new Color(180, 0, 0)); // Rojo
+                }
+                panelCarnet.setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(this, "Socio no encontrado.");
+                panelCarnet.setVisible(false);
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Ingrese un DNI válido (solo números).");
         }
 
-        panelCarnet.setVisible(true);
+        txtBusqueda.selectAll();
         revalidate();
         repaint();
     }
 
     private JPanel construirPanelCarnet() {
         JPanel carnet = new JPanel(new BorderLayout());
-        carnet.setPreferredSize(new Dimension(500, 250));
+
+        carnet.setPreferredSize(new Dimension(550, 300));
         carnet.setBackground(new Color(45, 45, 45));
-        carnet.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80), 1));
 
-        // Parte superior (Foto y Datos)
+        carnet.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(80, 80, 80), 1),
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
 
-        JPanel panelInfo = new JPanel(new GridLayout(1, 2));
+        JPanel panelInfo = new JPanel(new BorderLayout(20, 0));
         panelInfo.setOpaque(false);
 
-        JLabel lblFoto = new JLabel("FOTO", SwingConstants.CENTER);
-        lblFoto.setForeground(Color.GRAY);
-        lblFoto.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(80, 80, 80)));
+        JLabel lblFoto = new JLabel("PHOTO", SwingConstants.CENTER);
+        lblFoto.setPreferredSize(new Dimension(160, 0));
+        lblFoto.setForeground(new Color(90, 90, 90));
+        lblFoto.setFont(new Font("Segoe UI", Font.BOLD, 30));
+        lblFoto.setBorder(BorderFactory.createLineBorder(new Color(70, 70, 70), 2));
 
         lblDatosSocio = new JLabel();
-        panelInfo.add(lblFoto);
-        panelInfo.add(lblDatosSocio);
+        lblDatosSocio.setVerticalAlignment(SwingConstants.TOP);
 
-        // Barra Inferior de Estado
+        panelInfo.add(lblFoto, BorderLayout.WEST);
+        panelInfo.add(lblDatosSocio, BorderLayout.CENTER);
 
         lblEstadoCuota = new JLabel("ESTADO", SwingConstants.CENTER);
         lblEstadoCuota.setOpaque(true);
         lblEstadoCuota.setForeground(Color.WHITE);
-        lblEstadoCuota.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblEstadoCuota.setPreferredSize(new Dimension(0, 45));
+        lblEstadoCuota.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblEstadoCuota.setPreferredSize(new Dimension(0, 60));
+
+        JPanel panelContenedorEstado = new JPanel(new BorderLayout());
+        panelContenedorEstado.setOpaque(false);
+        panelContenedorEstado.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        panelContenedorEstado.add(lblEstadoCuota, BorderLayout.CENTER);
 
         carnet.add(panelInfo, BorderLayout.CENTER);
-        carnet.add(lblEstadoCuota, BorderLayout.SOUTH);
+        carnet.add(panelContenedorEstado, BorderLayout.SOUTH);
 
         return carnet;
     }
@@ -133,8 +173,7 @@ public class PanelAcceso extends JPanel {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getModel().isRollover() ? new Color(220, 0, 0) : new Color(180, 0, 0));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.setColor(getModel().isRollover() ? new Color(220, 0, 0) : new Color(180, 0, 0));                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
                 g2.dispose();
                 super.paintComponent(g);
             }

@@ -14,11 +14,13 @@ public class DialogoNuevoSocio extends JDialog {
     private boolean modoEdicion = false; // Flag para distinguir la acción
 
     // Constructor para NUEVO SOCIO
+
     public DialogoNuevoSocio(Frame parent) {
         this(parent, null);
     }
 
     // Constructor para EDITAR SOCIO (recibe los datos de la fila seleccionada)
+
     public DialogoNuevoSocio(Frame parent, Object[] datosSocio) {
         super(parent, "Registrar Nuevo Socio", true);
         this.socioDAO = new SocioDAO();
@@ -27,6 +29,7 @@ public class DialogoNuevoSocio extends JDialog {
         getContentPane().setBackground(new Color(35, 35, 35));
 
         // --- PANEL DE FORMULARIO ---
+
         JPanel panelForm = new JPanel(new GridLayout(5, 2, 10, 15));
         panelForm.setOpaque(false);
         panelForm.setBorder(BorderFactory.createEmptyBorder(25, 25, 10, 25));
@@ -55,7 +58,8 @@ public class DialogoNuevoSocio extends JDialog {
         panelForm.add(crearLabel("Vencimiento:", labelFont));
         txtVencimiento = crearTextField();
 
-        // Seteamos fecha automática por defecto
+        // Setea fecha automática por defecto
+
         LocalDate proximoMes = LocalDate.now().plusMonths(1);
         DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         txtVencimiento.setText(proximoMes.format(formato));
@@ -64,6 +68,7 @@ public class DialogoNuevoSocio extends JDialog {
         add(panelForm, BorderLayout.CENTER);
 
         // --- CONFIGURACIÓN SI ES EDICIÓN ---
+
         if (datosSocio != null) {
             modoEdicion = true;
             setTitle("Editar Socio");
@@ -76,6 +81,7 @@ public class DialogoNuevoSocio extends JDialog {
         }
 
         // --- PANEL DE BOTONES ---
+
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
         panelBotones.setOpaque(false);
 
@@ -119,7 +125,9 @@ public class DialogoNuevoSocio extends JDialog {
 
             boolean exito;
             if (modoEdicion) {
+
                 // Si estamos editando, usamos el nuevo método UPDATE
+
                 exito = socioDAO.editarSocio(dni, nom, ape, plan, venc);
             } else {
                 exito = socioDAO.guardarSocio(dni, nom, ape, plan, venc);

@@ -1,20 +1,202 @@
 package ui.pestañas;
 
+import dao.SocioDAO;
+import dao.PagoDAO;
 import javax.swing.*;
+import javax.swing.table.*;
 import java.awt.*;
+import java.util.List;
 
 public class PanelCaja extends JPanel {
+    private JTextField txtDni, txtMonto;
+    private JComboBox<String> comboMetodo;
+    private JTable tablaPagos;
+    private DefaultTableModel modeloTabla;
+    private SocioDAO socioDAO = new SocioDAO();
+    private PagoDAO pagoDAO = new PagoDAO();
+
     public PanelCaja() {
-        setBackground(new Color(30, 30, 30));
+        setBackground(new Color(25, 25, 25));
         setLayout(new BorderLayout());
 
-        // Título de la pestaña
+        // --- ENCABEZADO ---
 
-        JLabel titulo = new JLabel("Ingresos", SwingConstants.CENTER);
-        titulo.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        JPanel pnlNorte = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        pnlNorte.setOpaque(false);
+        pnlNorte.setBorder(BorderFactory.createEmptyBorder(20, 30, 10, 30));
+
+        JLabel titulo = new JLabel("GESTIÓN DE COBROS");
+        titulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titulo.setForeground(Color.WHITE);
-        titulo.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        pnlNorte.add(titulo);
+        add(pnlNorte, BorderLayout.NORTH);
 
-        add(titulo, BorderLayout.NORTH);
+        // --- CONTENIDO CENTRAL ---
+
+        JPanel pnlCentro = new JPanel();
+        pnlCentro.setLayout(new BoxLayout(pnlCentro, BoxLayout.Y_AXIS));
+        pnlCentro.setOpaque(false);
+
+        // FORMULARIO DE COBRO
+
+        JPanel pnlForm = new JPanel(new GridBagLayout());
+        pnlForm.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 10, 8, 10);
+
+        txtDni = crearTextField();
+        txtMonto = crearTextField();
+
+        String[] opciones = {"Efectivo", "Mercado Pago"};
+        comboMetodo = new JComboBox<>(opciones);
+        comboMetodo.setBackground(new Color(45, 45, 45));
+        comboMetodo.setForeground(Color.WHITE);
+        comboMetodo.setPreferredSize(new Dimension(220, 35));
+
+        JButton btnCobrar = crearBotonRojoPrime("REGISTRAR PAGO Y RENOVAR");
+
+        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.EAST;
+        pnlForm.add(crearLabel("DNI DEL SOCIO:"), gbc);
+        gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
+        pnlForm.add(txtDni, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 1; gbc.anchor = GridBagConstraints.EAST;
+        pnlForm.add(crearLabel("MONTO ($):"), gbc);
+        gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
+        pnlForm.add(txtMonto, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 2; gbc.anchor = GridBagConstraints.EAST;
+        pnlForm.add(crearLabel("MÉTODO:"), gbc);
+        gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
+        pnlForm.add(comboMetodo, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(20, 10, 10, 10);
+        pnlForm.add(btnCobrar, gbc);
+
+        pnlCentro.add(pnlForm);
+        pnlCentro.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // --- TABLA DE HISTORIAL (CON BORDE MINUCIOSO) ---
+
+        modeloTabla = new DefaultTableModel(new String[]{"DNI SOCIO", "MONTO", "FECHA", "MÉTODO"}, 0);
+        tablaPagos = new JTable(modeloTabla);
+        estilizarTablaPrime(tablaPagos);
+
+        JScrollPane scroll = new JScrollPane(tablaPagos);
+        scroll.setPreferredSize(new Dimension(750, 250));
+        scroll.getViewport().setBackground(new Color(25, 25, 25));
+        scroll.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60), 1));
+        scroll.getVerticalScrollBar().setUnitIncrement(12);
+
+        // Panel para el título superior de la tabla
+
+        JPanel pnlMargenTabla = new JPanel(new BorderLayout());
+        pnlMargenTabla.setOpaque(false);
+        pnlMargenTabla.setBorder(BorderFactory.createEmptyBorder(0, 50, 20, 50));
+
+        JLabel lblHist = new JLabel("HISTORIAL RECIENTE");
+        lblHist.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblHist.setForeground(new Color(120, 120, 120));
+        lblHist.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+
+        pnlMargenTabla.add(lblHist, BorderLayout.NORTH);
+        pnlMargenTabla.add(scroll, BorderLayout.CENTER);
+
+        pnlCentro.add(pnlMargenTabla);
+        add(pnlCentro, BorderLayout.CENTER);
+
+        btnCobrar.addActionListener(e -> ejecutarCobro());
+        cargarUltimosPagos();
+    }
+
+    private void ejecutarCobro() {
+        try {
+            int dni = Integer.parseInt(txtDni.getText().trim());
+            double monto = Double.parseDouble(txtMonto.getText().trim());
+            String metodo = (String) comboMetodo.getSelectedItem();
+
+            if (pagoDAO.registrarPago(dni, monto, metodo)) {
+                if (socioDAO.renovarSocio(dni)) {
+                    txtDni.setText("");
+                    txtMonto.setText("");
+                    cargarUltimosPagos();
+                    mostrarMensajeOscuro("✅ Pago registrado con " + metodo);
+                }
+            }
+        } catch (Exception ex) {
+            mostrarMensajeOscuro("❌ Error: Verifique los datos ingresados.");
+        }
+    }
+
+    private void cargarUltimosPagos() {
+        modeloTabla.setRowCount(0);
+        List<Object[]> datos = pagoDAO.obtenerUltimosPagos(10);
+        for (Object[] fila : datos) {
+            modeloTabla.addRow(fila);
+        }
+    }
+
+    private void estilizarTablaPrime(JTable t) {
+        t.setBackground(new Color(25, 25, 25));
+        t.setForeground(new Color(220, 220, 220));
+        t.setRowHeight(35);
+        t.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        t.setSelectionBackground(new Color(255, 140, 0, 100));
+        t.setSelectionForeground(Color.WHITE);
+        t.setGridColor(new Color(45, 45, 45));
+        t.setShowGrid(true);
+
+        JTableHeader header = t.getTableHeader();
+        header.setBackground(new Color(35, 35, 35));
+        header.setForeground(Color.WHITE);
+        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(60, 60, 60)));
+    }
+
+    private JButton crearBotonRojoPrime(String t) {
+        JButton btn = new JButton(t) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? new Color(220, 0, 0) : new Color(180, 0, 0));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setPreferredSize(new Dimension(350, 50));
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        return btn;
+    }
+
+    private void mostrarMensajeOscuro(String msg) {
+        UIManager.put("OptionPane.background", new Color(45, 45, 45));
+        UIManager.put("Panel.background", new Color(45, 45, 45));
+        UIManager.put("OptionPane.messageForeground", Color.WHITE);
+        JOptionPane.showMessageDialog(this, msg, "PrimeGym", JOptionPane.PLAIN_MESSAGE);
+    }
+
+    private JLabel crearLabel(String t) {
+        JLabel l = new JLabel(t);
+        l.setForeground(new Color(180, 180, 180));
+        l.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        return l;
+    }
+
+    private JTextField crearTextField() {
+        JTextField t = new JTextField(15);
+        t.setBackground(new Color(40, 40, 40));
+        t.setForeground(Color.WHITE);
+        t.setCaretColor(Color.WHITE);
+        t.setPreferredSize(new Dimension(220, 35));
+        t.setBorder(BorderFactory.createLineBorder(new Color(65, 65, 65)));
+        return t;
     }
 }

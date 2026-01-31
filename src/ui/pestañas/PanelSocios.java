@@ -18,6 +18,7 @@ public class PanelSocios extends JPanel {
         setLayout(new BorderLayout());
 
         // --- ENCABEZADO ---
+
         JPanel panelNorte = new JPanel(new BorderLayout());
         panelNorte.setOpaque(false);
         panelNorte.setBorder(BorderFactory.createEmptyBorder(20, 25, 10, 25));
@@ -27,6 +28,7 @@ public class PanelSocios extends JPanel {
         titulo.setForeground(Color.WHITE);
 
         // BOTÓN QUE ABRE EL MINI MENÚ
+
         JButton btnAcciones = new JButton("ACCIONES ▼");
         btnAcciones.setBackground(new Color(255, 140, 0));
         btnAcciones.setForeground(Color.WHITE);
@@ -34,7 +36,8 @@ public class PanelSocios extends JPanel {
         btnAcciones.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnAcciones.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // CREACIÓN DEL MINI MENÚ (JPopupMenu)
+        // CREACIÓN DEL MINI MENÚ
+
         JPopupMenu menu = new JPopupMenu();
         menu.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)));
 
@@ -50,6 +53,7 @@ public class PanelSocios extends JPanel {
         menu.add(itemEditar);
 
         // --- LÓGICA DEL MENÚ ---
+
         btnAcciones.addActionListener(e -> menu.show(btnAcciones, 0, btnAcciones.getHeight()));
 
         itemNuevo.addActionListener(e -> {
@@ -62,7 +66,8 @@ public class PanelSocios extends JPanel {
 
         itemBaja.addActionListener(e -> eliminarSocioSeleccionado());
 
-        // CORRECCIÓN: Lógica para Editar Socio
+        // Lógica para Editar Socio
+
         itemEditar.addActionListener(e -> editarSocioSeleccionado());
 
         panelNorte.add(titulo, BorderLayout.WEST);
@@ -70,6 +75,7 @@ public class PanelSocios extends JPanel {
         add(panelNorte, BorderLayout.NORTH);
 
         // --- CUERPO DE LA TABLA ---
+
         JPanel panelCuerpo = new JPanel(new BorderLayout());
         panelCuerpo.setOpaque(false);
         panelCuerpo.setBorder(BorderFactory.createEmptyBorder(10, 25, 25, 25));
@@ -97,7 +103,8 @@ public class PanelSocios extends JPanel {
             return;
         }
 
-        // Extraemos los datos de la fila para pasárselos al diálogo
+        // Extrae los datos de la fila para pasárselos al diálogo
+
         Object[] datosSocio = {
                 tablaSocios.getValueAt(fila, 0), // DNI (Integer)
                 tablaSocios.getValueAt(fila, 1), // Nombre
@@ -107,10 +114,12 @@ public class PanelSocios extends JPanel {
         };
 
         Frame f = (Frame) SwingUtilities.getWindowAncestor(this);
-        // Llamamos al constructor especial de edición
+
+        // Llama al constructor especial de edición
+
         DialogoNuevoSocio diag = new DialogoNuevoSocio(f, datosSocio);
         diag.setVisible(true);
-        actualizarTabla(); // Refrescamos al volver
+        actualizarTabla();
     }
 
     private void eliminarSocioSeleccionado() {
@@ -172,6 +181,7 @@ public class PanelSocios extends JPanel {
     }
 
     // Método auxiliar para crear items de menú con estilo oscuro
+
     private JMenuItem crearItemMenu(String texto) {
         JMenuItem item = new JMenuItem(texto);
         item.setBackground(new Color(45, 45, 45));
