@@ -7,6 +7,7 @@ public class Main {
 
         VentanaLogin login = new VentanaLogin();
         login.setVisible(true);
+        util.ConexionDB.crearTablas();
 
     }
 }
