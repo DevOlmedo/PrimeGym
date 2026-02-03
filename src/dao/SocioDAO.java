@@ -4,6 +4,7 @@ import util.ConexionDB;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,9 +12,54 @@ public class SocioDAO {
 
     private final DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    // Obtiene la lista detallada de socios con pagos vencidos
 
-    // 1. Si es un socio de "mitad de mes" (ej. día 10), se le suma 1 mes exacto (día 10 del próximo).
-    // 2. Si es un socio de "fin de mes" (día 29, 30 o 31), se ajusta al último día del próximo mes.
+    public List<Object[]> obtenerListaMorosos() {
+        List<Object[]> morosos = new ArrayList<>();
+        List<Object[]> todos = obtenerTodos(); // Reutilizamos el motor de cálculo de estados
+        LocalDate hoy = LocalDate.now();
+
+        for (Object[] socio : todos) {
+            if ("DEUDA".equals(socio[5])) { // Filtramos solo los que deben
+                String vencimientoStr = (String) socio[4];
+                long diasAtraso = 0;
+
+                try {
+                    LocalDate fechaVenc = LocalDate.parse(vencimientoStr, formateador);
+                    diasAtraso = ChronoUnit.DAYS.between(fechaVenc, hoy);
+                } catch (Exception e) {}
+
+                // Formato: Nombre Completo, DNI, Fecha Vencimiento, Días de Atraso
+                morosos.add(new Object[]{
+                        socio[1] + " " + socio[2], // Nombre + Apellido
+                        socio[0],                 // DNI
+                        vencimientoStr,           // Fecha vencida
+                        diasAtraso + " días"      // Tiempo de mora
+                });
+            }
+        }
+        return morosos;
+    }
+
+    // Calcula cuántos socios están activos y cuántos son deudores para el tablero
+
+    public int[] obtenerConteoEstados() {
+        int activos = 0;
+        int deudores = 0;
+        List<Object[]> todos = obtenerTodos();
+
+        for (Object[] socio : todos) {
+            String estado = (String) socio[5];
+            if ("AL DÍA".equals(estado)) {
+                activos++;
+            } else if ("DEUDA".equals(estado)) {
+                deudores++;
+            }
+        }
+        return new int[]{activos, deudores};
+    }
+
+    // Renueva la membresía de un socio aplicando la lógica inteligente de fin de mes
 
     public boolean renovarSocio(int dni) {
         String sqlSelect = "SELECT vencimiento FROM socios WHERE dni = ?";
@@ -38,21 +84,11 @@ public class SocioDAO {
             LocalDate actual = LocalDate.parse(fechaVencimientoActualStr, formateador);
             LocalDate baseParaCalculo = LocalDate.now().isAfter(actual) ? LocalDate.now() : actual;
 
-            // Suma el mes de forma estándar (Eje: 14/01 -> 14/02)
-
             nuevaFecha = baseParaCalculo.plusMonths(1);
-
-            // LÓGICA DE RECUPERACIÓN DE FIN DE MES
-            // Si la fecha actual es el último día del mes (28, 29, 30 o 31)
-            // forzamos que la nueva fecha TAMBIÉN sea el último día de su respectivo mes.
-            // Esto hace que si estás en el 28 de Febrero, salte al 31 de Marzo.
 
             if (baseParaCalculo.getDayOfMonth() == baseParaCalculo.lengthOfMonth()) {
                 nuevaFecha = nuevaFecha.withDayOfMonth(nuevaFecha.lengthOfMonth());
             }
-
-            // Si era el día 14, como NO es el último día del mes (Enero tiene 31),
-            // la condición de arriba es falsa y se queda en 14/02.
 
         } catch (Exception e) {
             nuevaFecha = LocalDate.now().plusMonths(1);
@@ -72,7 +108,7 @@ public class SocioDAO {
         }
     }
 
-    // Busca un socio por DNI para el Control de Acceso.
+    // Busca un socio por DNI y determina su estado en tiempo real
 
     public Object[] buscarPorDni(int dni) {
         String sql = "SELECT * FROM socios WHERE dni = ?";
@@ -112,7 +148,7 @@ public class SocioDAO {
         return null;
     }
 
-    // --- MÉTODOS DE GESTIÓN (ABM) ---
+    // --- MÉTODOS ABM (Guardar, Editar, Eliminar) ---
 
     public boolean guardarSocio(int dni, String nombre, String apellido, String plan, String vencimiento) {
         String sql = "INSERT INTO socios(dni, nombre, apellido, plan, vencimiento, cuota_al_dia) VALUES(?,?,?,?,?,1)";
@@ -157,6 +193,8 @@ public class SocioDAO {
             return false;
         }
     }
+
+    // Lista todos los socios de la base de datos con su estado de deuda calculado
 
     public List<Object[]> obtenerTodos() {
         List<Object[]> lista = new ArrayList<>();
