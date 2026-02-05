@@ -1,17 +1,23 @@
 package ui.dialogos;
 
 import model.Producto;
+import dao.SocioDAO;
 import javax.swing.*;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 import java.awt.*;
 
 public class DialogoVenta extends JDialog {
     private boolean respuesta = false;
-    private JComboBox<String> comboMetodo; // Selector para evitar inconsistencias en estadísticas
+    private JComboBox<String> comboMetodo;
+    private JTextField txtDniSocio;
 
     public DialogoVenta(Frame parent, Producto p) {
         super(parent, true);
         setUndecorated(true);
-        setSize(400, 360);
+        setSize(400, 460);
         setLocationRelativeTo(parent);
 
         JPanel panel = new JPanel(new BorderLayout());
@@ -57,14 +63,45 @@ public class DialogoVenta extends JDialog {
         comboMetodo.setForeground(Color.WHITE);
         comboMetodo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         comboMetodo.setAlignmentX(Component.CENTER_ALIGNMENT);
-
         comboMetodo.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)));
+
+        // --- Campo DNI Socio (Opcional) ---
+
+        JLabel lblDni = new JLabel("DNI Socio (Opcional):");
+        lblDni.setForeground(Color.GRAY);
+        lblDni.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblDni.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblDni.setBorder(BorderFactory.createEmptyBorder(15, 0, 5, 0));
+
+        txtDniSocio = new JTextField();
+        txtDniSocio.setMaximumSize(new Dimension(220, 35));
+        txtDniSocio.setBackground(new Color(45, 45, 45));
+        txtDniSocio.setForeground(Color.WHITE);
+        txtDniSocio.setCaretColor(Color.WHITE);
+        txtDniSocio.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        txtDniSocio.setHorizontalAlignment(JTextField.CENTER);
+        txtDniSocio.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)));
+
+        // CAPA DE SEGURIDAD 1: Filtro para impedir letras
+
+        ((AbstractDocument) txtDniSocio.getDocument()).setDocumentFilter(new DocumentFilter() {
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
+                if (string.matches("\\d+")) super.insertString(fb, offset, string, attr);
+            }
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+                if (text.matches("\\d+")) super.replace(fb, offset, length, text, attrs);
+            }
+        });
 
         centro.add(lblMsg);
         centro.add(lblPrecio);
         centro.add(lblMetodo);
         centro.add(Box.createVerticalStrut(5));
         centro.add(comboMetodo);
+        centro.add(lblDni);
+        centro.add(txtDniSocio);
 
         // --- Botones Inferiores ---
 
@@ -75,7 +112,23 @@ public class DialogoVenta extends JDialog {
         JButton btnAcept = crearBotonEstilo("ACEPTAR", new Color(180, 0, 0));
 
         btnCance.addActionListener(e -> { respuesta = false; dispose(); });
-        btnAcept.addActionListener(e -> { respuesta = true; dispose(); });
+
+        // CAPA DE SEGURIDAD 2: Validación de existencia en DB
+
+        btnAcept.addActionListener(e -> {
+            int dni = getDniIngresado();
+            if (dni != 0) {
+                if (!new SocioDAO().existeSocio(dni)) {
+                    JOptionPane.showMessageDialog(this,
+                            "ERROR: El DNI " + dni + " no existe en la base de socios.\n" +
+                                    "La venta se registrará como ANÓNIMA.",
+                            "Socio no encontrado", JOptionPane.WARNING_MESSAGE);
+                    txtDniSocio.setText(""); // Limpiamos para que getDniIngresado devuelva 0
+                }
+            }
+            respuesta = true;
+            dispose();
+        });
 
         sur.add(btnCance);
         sur.add(btnAcept);
@@ -91,19 +144,13 @@ public class DialogoVenta extends JDialog {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                if (getModel().isRollover()) {
-                    g2.setColor(bg.brighter());
-                } else {
-                    g2.setColor(bg);
-                }
-
+                if (getModel().isRollover()) g2.setColor(bg.brighter());
+                else g2.setColor(bg);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
-
         b.setPreferredSize(new Dimension(140, 45));
         b.setForeground(Color.WHITE);
         b.setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -111,15 +158,18 @@ public class DialogoVenta extends JDialog {
         b.setContentAreaFilled(false);
         b.setBorderPainted(false);
         b.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
         return b;
     }
 
-    // Getter para que el PanelMarket obtenga el método de pago seleccionado
-
-    public String getMetodoSeleccionado() {
-        return (String) comboMetodo.getSelectedItem();
+    public int getDniIngresado() {
+        try {
+            String texto = txtDniSocio.getText().trim();
+            return texto.isEmpty() ? 0 : Integer.parseInt(texto);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
+    public String getMetodoSeleccionado() { return (String) comboMetodo.getSelectedItem(); }
     public boolean getRespuesta() { return respuesta; }
 }

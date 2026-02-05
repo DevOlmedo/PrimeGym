@@ -34,32 +34,42 @@ public class PagoDAO {
 
     // Detecta "Market (Efectivo)" y "Efectivo" mediante .contains()
 
-    public double[] obtenerTotalesPorMetodo() {
+    public double[] obtenerTotalesPorMetodo(LocalDate inicio, LocalDate fin) {
         double efectivo = 0, mercadoPago = 0;
-        String filtroMes = LocalDate.now().format(DateTimeFormatter.ofPattern("/MM/yyyy"));
-        String sql = "SELECT monto, metodo_pago FROM pagos WHERE fecha LIKE ?";
+
+        // Selecciona todos los pagos para filtrar por fecha en Java
+
+        String sql = "SELECT monto, fecha, metodo_pago FROM pagos";
 
         try (Connection conn = ConexionDB.conectar();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, "%" + filtroMes);
-            ResultSet rs = pstmt.executeQuery();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                String metodo = rs.getString("metodo_pago");
-                double monto = rs.getDouble("monto");
+                String fechaTexto = rs.getString("fecha");
+                if (fechaTexto != null) {
+                    LocalDate fechaPago = LocalDate.parse(fechaTexto, formateador);
 
-                if (metodo != null) {
+                    // Filtra según el periodo seleccionado
 
-                    if (metodo.contains("Efectivo")) {
-                        efectivo += monto;
-                    } else if (metodo.contains("Mercado Pago")) {
-                        mercadoPago += monto;
+                    if ((fechaPago.isAfter(inicio) || fechaPago.isEqual(inicio)) &&
+                            (fechaPago.isBefore(fin) || fechaPago.isEqual(fin))) {
+
+                        String metodo = rs.getString("metodo_pago");
+                        double monto = rs.getDouble("monto");
+
+                        if (metodo != null) {
+                            if (metodo.contains("Efectivo")) {
+                                efectivo += monto;
+                            } else if (metodo.contains("Mercado Pago")) {
+                                mercadoPago += monto;
+                            }
+                        }
                     }
                 }
             }
-        } catch (SQLException e) {
-            System.out.println("Error en totales por método: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Error en desglose dinámico: " + e.getMessage());
         }
         return new double[]{efectivo, mercadoPago};
     }
@@ -134,4 +144,42 @@ public class PagoDAO {
         }
         return 0.0;
     }
+
+    // Recupera todos los pagos (cuotas y market) de un socio específico
+
+    public List<Object[]> obtenerHistorialPorSocio(int dni) {
+        List<Object[]> historial = new ArrayList<>();
+        String sql = "SELECT monto, fecha, metodo_pago FROM pagos WHERE socio_dni = ? ORDER BY id DESC";
+
+        try (Connection conn = util.ConexionDB.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, dni);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                String metodoCompleto = rs.getString("metodo_pago");
+                String concepto = "Cuota Gimnasio"; // Por defecto
+                String metodoPure = metodoCompleto;
+
+                // Si el texto contiene "Compra:", extrae el nombre del producto
+
+                if (metodoCompleto.contains("Compra: ")) {
+                    concepto = metodoCompleto.substring(metodoCompleto.indexOf(":") + 2, metodoCompleto.indexOf(" ("));
+                    metodoPure = metodoCompleto.substring(metodoCompleto.indexOf("(") + 1, metodoCompleto.indexOf(")"));
+                }
+
+                historial.add(new Object[]{
+                        rs.getString("fecha"),
+                        concepto,
+                        metodoPure,
+                        "$ " + String.format("%.2f", rs.getDouble("monto"))
+                });
+            }
+        } catch (SQLException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        return historial;
+    }
+
 }

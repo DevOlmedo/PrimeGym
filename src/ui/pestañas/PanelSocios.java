@@ -1,10 +1,14 @@
 package ui.pestañas;
 
 import ui.dialogos.DialogoNuevoSocio;
+import ui.dialogos.DialogoHistorialSocio; // Nuevo import
 import dao.SocioDAO;
+import dao.PagoDAO; // Nuevo import
 import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.List;
 
 public class PanelSocios extends JPanel {
@@ -12,6 +16,7 @@ public class PanelSocios extends JPanel {
     private JTable tablaSocios;
     private DefaultTableModel modeloTabla;
     private SocioDAO socioDAO = new SocioDAO();
+    private PagoDAO pagoDAO = new PagoDAO(); // Instancia para manejar el historial
 
     public PanelSocios() {
         setBackground(new Color(30, 30, 30));
@@ -27,7 +32,7 @@ public class PanelSocios extends JPanel {
         titulo.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titulo.setForeground(Color.WHITE);
 
-        // BOTÓN QUE ABRE EL MINI MENÚ
+        // BOTÓN ACCIONES
 
         JButton btnAcciones = new JButton("ACCIONES ▼");
         btnAcciones.setBackground(new Color(255, 140, 0));
@@ -36,23 +41,25 @@ public class PanelSocios extends JPanel {
         btnAcciones.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnAcciones.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // CREACIÓN DEL MINI MENÚ
+        // MENÚ DESPLEGABLE
 
         JPopupMenu menu = new JPopupMenu();
         menu.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)));
 
         JMenuItem itemNuevo = crearItemMenu("Cargar Nuevo Socio");
         JMenuItem itemVer = crearItemMenu("Ver Todos (Actualizar)");
-        JMenuItem itemBaja = crearItemMenu("Dar de Baja a un Socio");
+        JMenuItem itemHistorial = crearItemMenu("Ver Historial de Pagos"); // Opción nueva
         JMenuItem itemEditar = crearItemMenu("Editar Socio");
+        JMenuItem itemBaja = crearItemMenu("Dar de Baja a un Socio");
 
         menu.add(itemNuevo);
         menu.add(itemVer);
-        menu.add(new JSeparator()); // Separador visual
-        menu.add(itemBaja);
+        menu.add(new JSeparator());
+        menu.add(itemHistorial); // Agregado al menú
         menu.add(itemEditar);
+        menu.add(itemBaja);
 
-        // --- LÓGICA DEL MENÚ ---
+        // --- LÓGICA DE ACCIONES ---
 
         btnAcciones.addActionListener(e -> menu.show(btnAcciones, 0, btnAcciones.getHeight()));
 
@@ -64,9 +71,9 @@ public class PanelSocios extends JPanel {
 
         itemVer.addActionListener(e -> actualizarTabla());
 
-        itemBaja.addActionListener(e -> eliminarSocioSeleccionado());
+        itemHistorial.addActionListener(e -> abrirHistorialSeleccionado()); // Lógica historial
 
-        // Lógica para Editar Socio
+        itemBaja.addActionListener(e -> eliminarSocioSeleccionado());
 
         itemEditar.addActionListener(e -> editarSocioSeleccionado());
 
@@ -87,6 +94,17 @@ public class PanelSocios extends JPanel {
         tablaSocios = new JTable(modeloTabla);
         configurarEstiloTabla();
 
+        // LÓGICA DE DOBLE CLIC PARA HISTORIAL
+
+        tablaSocios.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && tablaSocios.getSelectedRow() != -1) {
+                    abrirHistorialSeleccionado();
+                }
+            }
+        });
+
         JScrollPane scroll = new JScrollPane(tablaSocios);
         scroll.getViewport().setBackground(new Color(30, 30, 30));
         scroll.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
@@ -96,6 +114,27 @@ public class PanelSocios extends JPanel {
         actualizarTabla();
     }
 
+    // Lógica para obtener el historial del socio seleccionado y mostrar el diálogo
+
+    private void abrirHistorialSeleccionado() {
+        int fila = tablaSocios.getSelectedRow();
+        if (fila == -1) {
+            JOptionPane.showMessageDialog(this, "Por favor, selecciona un socio de la tabla.");
+            return;
+        }
+
+        int dni = (int) tablaSocios.getValueAt(fila, 0);
+        String nombreSocio = tablaSocios.getValueAt(fila, 1) + " " + tablaSocios.getValueAt(fila, 2);
+
+        // Obtiene los datos desde el PagoDAO
+
+        List<Object[]> historial = pagoDAO.obtenerHistorialPorSocio(dni);
+
+        Frame f = (Frame) SwingUtilities.getWindowAncestor(this);
+        DialogoHistorialSocio diag = new DialogoHistorialSocio(f, nombreSocio, historial);
+        diag.setVisible(true);
+    }
+
     private void editarSocioSeleccionado() {
         int fila = tablaSocios.getSelectedRow();
         if (fila == -1) {
@@ -103,20 +142,15 @@ public class PanelSocios extends JPanel {
             return;
         }
 
-        // Extrae los datos de la fila para pasárselos al diálogo
-
         Object[] datosSocio = {
-                tablaSocios.getValueAt(fila, 0), // DNI (Integer)
-                tablaSocios.getValueAt(fila, 1), // Nombre
-                tablaSocios.getValueAt(fila, 2), // Apellido
-                tablaSocios.getValueAt(fila, 3), // Plan
-                tablaSocios.getValueAt(fila, 4)  // Vencimiento
+                tablaSocios.getValueAt(fila, 0),
+                tablaSocios.getValueAt(fila, 1),
+                tablaSocios.getValueAt(fila, 2),
+                tablaSocios.getValueAt(fila, 3),
+                tablaSocios.getValueAt(fila, 4)
         };
 
         Frame f = (Frame) SwingUtilities.getWindowAncestor(this);
-
-        // Llama al constructor especial de edición
-
         DialogoNuevoSocio diag = new DialogoNuevoSocio(f, datosSocio);
         diag.setVisible(true);
         actualizarTabla();
@@ -153,7 +187,7 @@ public class PanelSocios extends JPanel {
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setHorizontalAlignment(JLabel.CENTER);
-                if (column == 5) { // Lógica de colores según estado
+                if (column == 5) {
                     if ("DEUDA".equals(value)) {
                         c.setForeground(Color.RED);
                         c.setFont(c.getFont().deriveFont(Font.BOLD));
@@ -179,8 +213,6 @@ public class PanelSocios extends JPanel {
             modeloTabla.addRow(fila);
         }
     }
-
-    // Método auxiliar para crear items de menú con estilo oscuro
 
     private JMenuItem crearItemMenu(String texto) {
         JMenuItem item = new JMenuItem(texto);

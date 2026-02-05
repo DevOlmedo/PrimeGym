@@ -12,15 +12,33 @@ public class SocioDAO {
 
     private final DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    // Verifica si un DNI existe en la base de datos.
+    // Utilizado por el Market para validar socios antes de registrar ventas.
+
+    public boolean existeSocio(int dni) {
+        String sql = "SELECT 1 FROM socios WHERE dni = ?";
+        try (Connection conn = ConexionDB.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, dni);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next(); // Retorna true si el DNI existe
+            }
+        } catch (SQLException e) {
+            System.out.println("Error al validar existencia de socio: " + e.getMessage());
+            return false;
+        }
+    }
+
     // Obtiene la lista detallada de socios con pagos vencidos
 
     public List<Object[]> obtenerListaMorosos() {
         List<Object[]> morosos = new ArrayList<>();
-        List<Object[]> todos = obtenerTodos(); // Reutilizamos el motor de cálculo de estados
+        List<Object[]> todos = obtenerTodos();
         LocalDate hoy = LocalDate.now();
 
         for (Object[] socio : todos) {
-            if ("DEUDA".equals(socio[5])) { // Filtramos solo los que deben
+            if ("DEUDA".equals(socio[5])) {
                 String vencimientoStr = (String) socio[4];
                 long diasAtraso = 0;
 
@@ -29,12 +47,11 @@ public class SocioDAO {
                     diasAtraso = ChronoUnit.DAYS.between(fechaVenc, hoy);
                 } catch (Exception e) {}
 
-                // Formato: Nombre Completo, DNI, Fecha Vencimiento, Días de Atraso
                 morosos.add(new Object[]{
-                        socio[1] + " " + socio[2], // Nombre + Apellido
-                        socio[0],                 // DNI
-                        vencimientoStr,           // Fecha vencida
-                        diasAtraso + " días"      // Tiempo de mora
+                        socio[1] + " " + socio[2],
+                        socio[0],
+                        vencimientoStr,
+                        diasAtraso + " días"
                 });
             }
         }
@@ -59,7 +76,7 @@ public class SocioDAO {
         return new int[]{activos, deudores};
     }
 
-    // Renueva la membresía de un socio aplicando la lógica inteligente de fin de mes
+    // Renueva la membresía de un socio
 
     public boolean renovarSocio(int dni) {
         String sqlSelect = "SELECT vencimiento FROM socios WHERE dni = ?";
@@ -148,7 +165,7 @@ public class SocioDAO {
         return null;
     }
 
-    // --- MÉTODOS ABM (Guardar, Editar, Eliminar) ---
+    // --- MÉTODOS ABM ---
 
     public boolean guardarSocio(int dni, String nombre, String apellido, String plan, String vencimiento) {
         String sql = "INSERT INTO socios(dni, nombre, apellido, plan, vencimiento, cuota_al_dia) VALUES(?,?,?,?,?,1)";
@@ -194,7 +211,7 @@ public class SocioDAO {
         }
     }
 
-    // Lista todos los socios de la base de datos con su estado de deuda calculado
+    // Lista todos los socios con su estado calculado
 
     public List<Object[]> obtenerTodos() {
         List<Object[]> lista = new ArrayList<>();

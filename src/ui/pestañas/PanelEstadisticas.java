@@ -20,6 +20,7 @@ public class PanelEstadisticas extends JPanel {
         setLayout(new BorderLayout());
 
         // --- ENCABEZADO CON FILTRO ---
+
         JPanel pnlNorte = new JPanel(new BorderLayout());
         pnlNorte.setOpaque(false);
         pnlNorte.setBorder(BorderFactory.createEmptyBorder(20, 30, 10, 30));
@@ -47,12 +48,14 @@ public class PanelEstadisticas extends JPanel {
         add(pnlNorte, BorderLayout.NORTH);
 
         // --- CONTENIDO CENTRAL ---
+
         JPanel pnlCentro = new JPanel();
         pnlCentro.setLayout(new BoxLayout(pnlCentro, BoxLayout.Y_AXIS));
         pnlCentro.setOpaque(false);
         pnlCentro.setBorder(BorderFactory.createEmptyBorder(10, 30, 20, 30));
 
-        // 1. Fila de Tarjetas (KPIs)
+        // Fila de Tarjetas
+
         JPanel pnlCards = new JPanel(new GridLayout(1, 3, 20, 0));
         pnlCards.setOpaque(false);
         pnlCards.setMaximumSize(new Dimension(1200, 150));
@@ -68,7 +71,8 @@ public class PanelEstadisticas extends JPanel {
         pnlCentro.add(pnlCards);
         pnlCentro.add(Box.createRigidArea(new Dimension(0, 30)));
 
-        // 2. TABLA DE MOROSOS (ESTILO CAJA)
+        // TABLA DE MOROSOS (ESTILO CAJA)
+
         modeloMorosos = new DefaultTableModel(new String[]{"NOMBRE Y APELLIDO", "DNI", "VENCIMIENTO", "ATRASO"}, 0);
         JTable tablaMorosos = new JTable(modeloMorosos);
         estilizarTablaPrime(tablaMorosos);
@@ -100,16 +104,21 @@ public class PanelEstadisticas extends JPanel {
         LocalDate inicio = LocalDate.now();
         LocalDate fin = LocalDate.now();
 
+        // Lógica de filtrado de fechas
+
         if (seleccion.equals("Esta Semana")) inicio = LocalDate.now().minusDays(7);
         if (seleccion.equals("Este Mes")) inicio = LocalDate.now().withDayOfMonth(1);
 
-        // Datos de recaudación y desglose
+        // LLAMADAS ACTUALIZADAS AL DAO
+
         double recaudado = pagoDAO.obtenerRecaudacionPorPeriodo(inicio, fin);
-        double[] desglose = pagoDAO.obtenerTotalesPorMetodo(); // Basado en el mes actual para contexto de caja
+
+        // Ahora el desglose respeta el filtro del ComboBox (Hoy, Semana o Mes)
+
+        double[] desglose = pagoDAO.obtenerTotalesPorMetodo(inicio, fin);
 
         int[] conteos = socioDAO.obtenerConteoEstados();
 
-        // Implementación de HTML para el desglose visual
         lblIngresos.setText("<html><center>$ " + String.format("%.2f", recaudado) +
                 "<br><font size='3' color='gray'>Efec: $" + String.format("%.0f", desglose[0]) +
                 " | MP: $" + String.format("%.0f", desglose[1]) + "</font></center></html>");

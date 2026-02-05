@@ -207,7 +207,7 @@ public class PanelMarket extends JPanel {
             }
         };
         card.setOpaque(false);
-        card.setPreferredSize(new Dimension(240, 480)); // Reducimos la altura total
+        card.setPreferredSize(new Dimension(240, 480));
         card.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -227,17 +227,15 @@ public class PanelMarket extends JPanel {
         gbc.insets = new Insets(0, 0, 10, 0);
         card.add(lblImagen, gbc);
 
-        // --- TEXTOS (Nombre, Desc, Precio, Stock) ---
+        // --- TEXTOS (Nombre con soporte multilínea, Desc, Precio, Stock) ---
 
         JLabel lblNombre = new JLabel("<html><body style='width: 160px; text-align: center;'>"
                 + producto.getNombre() + "</body></html>", SwingConstants.CENTER);
         lblNombre.setFont(new Font("Segoe UI", Font.BOLD, 18));
         lblNombre.setForeground(Color.WHITE);
 
-        // Configuración para el nombre
-
         gbc.gridy = 1;
-        gbc.insets = new Insets(0, 0, 5, 0); // Un pequeño margen inferior
+        gbc.insets = new Insets(0, 0, 5, 0);
         card.add(lblNombre, gbc);
 
         JLabel lblDesc = new JLabel("<html><body style='width: 150px; text-align: center;'>"
@@ -262,12 +260,9 @@ public class PanelMarket extends JPanel {
         card.add(lblStock, gbc);
 
         // --- BOTÓN VENDER ---
-
         JButton btnVender = crearBotonAccion("VENDER", new Color(46, 204, 113));
         btnVender.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnVender.setPreferredSize(new Dimension(0, 45));
-
-        // Validación visual de stock antes de intentar la venta
 
         if (producto.getStock() <= 0) {
             btnVender.setEnabled(false);
@@ -276,26 +271,50 @@ public class PanelMarket extends JPanel {
 
         btnVender.addActionListener(e -> {
             Frame padre = (Frame) SwingUtilities.getWindowAncestor(this);
-            DialogoVenta dv = new DialogoVenta(padre, producto);
+            ui.dialogos.DialogoVenta dv = new ui.dialogos.DialogoVenta(padre, producto);
             dv.setVisible(true);
 
-            // Si el usuario confirmó la venta y hay stock disponible en la DB
-
             if (dv.getRespuesta()) {
-
-                // Capta el método de pago elegido (Efectivo o Mercado Pago)
-
                 String metodoElegido = dv.getMetodoSeleccionado();
+                int dniVenta = dv.getDniIngresado(); // Ya validado y filtrado en el diálogo
+
+                // Intenta reducir el stock en la base de datos antes de confirmar el pago
 
                 if (productoDAO.reducirStock(producto.getId(), 1)) {
 
-                    // Registra el pago detallando el origen para las estadísticas
+                    // Registro del pago con el concepto detallado para el historial del socio
 
-                    new dao.PagoDAO().registrarPago(0, producto.getPrecio(), "Market (" + metodoElegido + ")");
+                    boolean exito = new dao.PagoDAO().registrarPago(dniVenta, producto.getPrecio(),
+                            "Compra: " + producto.getNombre() + " (" + metodoElegido + ")");
 
-                    // Actualiza la interfaz para mostrar el nuevo stock y los botones correctamente
+                    if (exito) {
 
-                    refrescarPantalla();
+                        // --- LLAMADA AL NUEVO DIÁLOGO DE ÉXITO ---
+
+                        String socioInfo = (dniVenta != 0) ? String.valueOf(dniVenta) : "Anónimo";
+
+                        ui.dialogos.DialogoExito de = new ui.dialogos.DialogoExito(
+                                padre,
+                                producto.getNombre(),
+                                String.format("%.2f", producto.getPrecio()),
+                                metodoElegido,
+                                socioInfo
+                        );
+                        de.setVisible(true);
+
+                        // Actualiza la interfaz para reflejar el nuevo stock inmediatamente
+
+                        refrescarPantalla();
+
+                    } else {
+
+                        // Por si hay un error crítico en el registro del pago
+
+                        JOptionPane.showMessageDialog(padre,
+                                "Error crítico: El stock se redujo pero el pago no se registró.",
+                                "Error de Base de Datos",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
                 }
             }
         });
@@ -312,11 +331,9 @@ public class PanelMarket extends JPanel {
         JButton btnEdit = crearBotonAccion("Editar", new Color(70, 70, 70));
         JButton btnDelete = crearBotonAccion("Borrar", new Color(150, 0, 0));
 
-        // Listeners corregidos para asegurar ejecución
-
         btnEdit.addActionListener(e -> {
             Frame padre = (Frame) SwingUtilities.getWindowAncestor(this);
-            VentanaCargaProducto diag = new VentanaCargaProducto(padre, producto);
+            ui.dialogos.VentanaCargaProducto diag = new ui.dialogos.VentanaCargaProducto(padre, producto);
             diag.setVisible(true);
             if (diag.isConfirmado()) {
                 productoDAO.editar(producto);
@@ -326,7 +343,7 @@ public class PanelMarket extends JPanel {
 
         btnDelete.addActionListener(e -> {
             Frame padre = (Frame) SwingUtilities.getWindowAncestor(this);
-            DialogoConfirmacion dc = new DialogoConfirmacion(padre, "¿Eliminar este producto?");
+            ui.dialogos.DialogoConfirmacion dc = new ui.dialogos.DialogoConfirmacion(padre, "¿Eliminar este producto?");
             dc.setVisible(true);
             if (dc.getRespuesta() && productoDAO.eliminar(producto.getId())) {
                 refrescarPantalla();
