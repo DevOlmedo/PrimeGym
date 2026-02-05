@@ -12,6 +12,3 @@ gen/
 # --- Archivos de Sistema ---
 .DS_Store
 Thumbs.db
-
-# --- Archivos de Datos Temporales ---
-productos.json

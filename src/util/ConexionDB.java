@@ -19,7 +19,7 @@ public class ConexionDB {
         return conn;
     }
 
-    // Este método crea las tablas si no existen
+    // Este método crea las tablas
 
     public static void crearTablas() {
 
@@ -45,13 +45,25 @@ public class ConexionDB {
                 + "FOREIGN KEY (socio_dni) REFERENCES socios(dni)"
                 + ");";
 
+        // Tabla de Productos para el Market
+
+        String sqlProductos = "CREATE TABLE IF NOT EXISTS productos ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "nombre TEXT NOT NULL,"
+                + "descripcion TEXT,"
+                + "precio REAL NOT NULL,"
+                + "stock INTEGER NOT NULL,"
+                + "ruta_imagen TEXT"
+                + ");";
+
         try (Connection conn = conectar();
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute(sqlSocios); //Ejecuta la tabla
-            stmt.execute(sqlPagos);  //Ejecuta la tabla
+            stmt.execute(sqlSocios);
+            stmt.execute(sqlPagos);
+            stmt.execute(sqlProductos);
 
-            System.out.println("✅ Base de datos lista: tablas 'socios' y 'pagos' verificadas.");
+            System.out.println("✅ Base de datos lista: tablas 'socios', 'pagos' y 'productos' verificadas.");
         } catch (SQLException e) {
             System.err.println("Error al crear tablas: " + e.getMessage());
         }

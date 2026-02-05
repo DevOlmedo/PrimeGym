@@ -11,7 +11,7 @@ public class PagoDAO {
 
     private final DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    // Registra un nuevo pago en la base de datos
+    // Registra un nuevo pago en la base de datos (Inscripciones y Market)
 
     public boolean registrarPago(int dni, double monto, String metodo) {
         String sql = "INSERT INTO pagos (socio_dni, monto, fecha, metodo_pago) VALUES (?, ?, ?, ?)";
@@ -32,8 +32,7 @@ public class PagoDAO {
         }
     }
 
-
-    // Calcula el desglose de ingresos por método para el mes actual
+    // Detecta "Market (Efectivo)" y "Efectivo" mediante .contains()
 
     public double[] obtenerTotalesPorMetodo() {
         double efectivo = 0, mercadoPago = 0;
@@ -50,10 +49,13 @@ public class PagoDAO {
                 String metodo = rs.getString("metodo_pago");
                 double monto = rs.getDouble("monto");
 
-                if ("Efectivo".equalsIgnoreCase(metodo)) {
-                    efectivo += monto;
-                } else {
-                    mercadoPago += monto;
+                if (metodo != null) {
+
+                    if (metodo.contains("Efectivo")) {
+                        efectivo += monto;
+                    } else if (metodo.contains("Mercado Pago")) {
+                        mercadoPago += monto;
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -62,7 +64,7 @@ public class PagoDAO {
         return new double[]{efectivo, mercadoPago};
     }
 
-    // Calcula recaudación en un rango
+    // Calcula recaudación en un rango de fechas
 
     public double obtenerRecaudacionPorPeriodo(LocalDate inicio, LocalDate fin) {
         double total = 0;
@@ -89,7 +91,6 @@ public class PagoDAO {
         return total;
     }
 
-
     // Recupera los últimos pagos realizados para mostrar en el historial de la Caja
 
     public List<Object[]> obtenerUltimosPagos(int limite) {
@@ -115,7 +116,6 @@ public class PagoDAO {
         }
         return lista;
     }
-
 
     // Calcula el total recaudado específicamente el día de hoy
 

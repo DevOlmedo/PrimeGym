@@ -6,13 +6,11 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 
 public class VentanaCargaProducto extends JDialog {
-    private JTextField txtNombre, txtPrecio, txtDesc;
+    private JTextField txtNombre, txtPrecio, txtDesc, txtStock; // Nuevo: txtStock
     private JButton btnFoto;
     private boolean confirmado = false;
     private String rutaImagen = "";
     private Producto productoParaEditar;
-
-    // Constructor para NUEVO producto
 
     public VentanaCargaProducto(Frame parent) {
         super(parent, "Nuevo Producto", true);
@@ -20,18 +18,16 @@ public class VentanaCargaProducto extends JDialog {
         inicializarComponentes();
     }
 
-    // Constructor para EDITAR producto existente
-
     public VentanaCargaProducto(Frame parent, Producto producto) {
         super(parent, "Editar Producto", true);
         this.productoParaEditar = producto;
         configurarVentana();
         inicializarComponentes();
-        rellenarCampos(); // Cargamos los datos actuales
+        rellenarCampos();
     }
 
     private void configurarVentana() {
-        setSize(350, 500);
+        setSize(380, 550); // Ajustado para el nuevo campo
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
         getContentPane().setBackground(new Color(45, 45, 45));
@@ -40,47 +36,50 @@ public class VentanaCargaProducto extends JDialog {
     private void rellenarCampos() {
         if (productoParaEditar != null) {
             txtNombre.setText(productoParaEditar.getNombre());
-            txtPrecio.setText(Double.toString(productoParaEditar.getPrecio())); // 💰 Conversión de número a texto
+            txtPrecio.setText(Double.toString(productoParaEditar.getPrecio()));
             txtDesc.setText(productoParaEditar.getDescripcion());
+            txtStock.setText(Integer.toString(productoParaEditar.getStock())); // Carga el stock actual
             this.rutaImagen = productoParaEditar.getRutaImagen();
             btnFoto.setText("✅ Imagen Cargada");
         }
     }
 
     private void inicializarComponentes() {
-        JPanel panelCampos = new JPanel(new GridLayout(0, 1, 10, 10));
+        JPanel panelCampos = new JPanel(new GridLayout(0, 1, 5, 5));
         panelCampos.setOpaque(false);
-        panelCampos.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panelCampos.setBorder(BorderFactory.createEmptyBorder(15, 25, 15, 25));
 
-        Font fuenteLabel = new Font("Segoe UI", Font.BOLD, 14);
+        Font fuenteLabel = new Font("Segoe UI", Font.BOLD, 13);
         Color colorTexto = Color.WHITE;
 
         // --- Campo Imagen ---
-
         btnFoto = new JButton("Seleccionar Imagen");
         btnFoto.addActionListener(e -> seleccionarImagen());
         panelCampos.add(crearLabel(" Imagen del producto:", fuenteLabel, colorTexto));
         panelCampos.add(btnFoto);
 
         // --- Campo Nombre ---
-
         panelCampos.add(crearLabel(" Nombre del producto:", fuenteLabel, colorTexto));
         txtNombre = crearCampo();
         panelCampos.add(txtNombre);
 
         // --- Campo Precio ---
-
         panelCampos.add(crearLabel(" Precio ($):", fuenteLabel, colorTexto));
         txtPrecio = crearCampo();
         panelCampos.add(txtPrecio);
+
+        // --- Campo Stock ---
+
+        panelCampos.add(crearLabel(" Stock Inicial:", fuenteLabel, colorTexto));
+        txtStock = crearCampo();
+        txtStock.setText("0"); // Valor por defecto
+        panelCampos.add(txtStock);
 
         // --- Campo Descripción ---
 
         panelCampos.add(crearLabel(" Descripción:", fuenteLabel, colorTexto));
         txtDesc = crearCampo();
         panelCampos.add(txtDesc);
-
-        // --- Botón Final ---
 
         JButton btnFinal = crearBotonConfirmar();
 
@@ -98,7 +97,7 @@ public class VentanaCargaProducto extends JDialog {
     }
 
     private JButton crearBotonConfirmar() {
-        JButton btn = new JButton("GUARDAR CAMBIOS") {
+        JButton btn = new JButton("GUARDAR PRODUCTO") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -116,24 +115,29 @@ public class VentanaCargaProducto extends JDialog {
         btn.setBorderPainted(false);
 
         btn.addActionListener(e -> {
-            if (txtNombre.getText().isEmpty() || txtPrecio.getText().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Nombre y Precio obligatorios");
+
+            // Validación de campos obligatorios
+
+            if (txtNombre.getText().isEmpty() || txtPrecio.getText().isEmpty() || txtStock.getText().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Nombre, Precio y Stock son obligatorios.");
             } else {
-                // Lógica de GUARDAR: ¿Editamos o Creamos?
-                if (productoParaEditar != null) {
-                    productoParaEditar.setNombre(txtNombre.getText());
-                    productoParaEditar.setPrecio(Double.parseDouble(txtPrecio.getText()));
-                    productoParaEditar.setDescripcion(txtDesc.getText());
-                    productoParaEditar.setRutaImagen(this.rutaImagen);
+                try {
+                    if (productoParaEditar != null) {
+                        productoParaEditar.setNombre(txtNombre.getText());
+                        productoParaEditar.setPrecio(Double.parseDouble(txtPrecio.getText()));
+                        productoParaEditar.setStock(Integer.parseInt(txtStock.getText()));
+                        productoParaEditar.setDescripcion(txtDesc.getText());
+                        productoParaEditar.setRutaImagen(this.rutaImagen);
+                    }
+                    confirmado = true;
+                    dispose();
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Precio y Stock deben ser números válidos.");
                 }
-                confirmado = true;
-                dispose();
             }
         });
         return btn;
     }
-
-    // Métodos auxiliares de UI (crearLabel, crearCampo...)
 
     private JLabel crearLabel(String t, Font f, Color c) {
         JLabel l = new JLabel(t);
@@ -154,9 +158,12 @@ public class VentanaCargaProducto extends JDialog {
         return tf;
     }
 
+    // Getters actualizados para recuperar la info desde PanelMarket
+
     public boolean isConfirmado() { return confirmado; }
     public String getNombre() { return txtNombre.getText(); }
     public String getPrecio() { return txtPrecio.getText(); }
+    public String getStock() { return txtStock.getText(); } // Nuevo Getter
     public String getDescripcion() { return txtDesc.getText(); }
     public String getRutaImagen() { return rutaImagen; }
 }
