@@ -74,11 +74,24 @@ public class PantallaPrincipal extends JFrame {
         lblCerrar.setForeground(Color.WHITE);
         lblCerrar.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblCerrar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // --- HOVER PARA CERRAR SESIÓN ---
+
         lblCerrar.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 dispose();
                 new VentanaLogin().setVisible(true);
+            }
+
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                lblCerrar.setForeground(new Color(231, 76, 60)); // Rojo Prime
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                lblCerrar.setForeground(Color.WHITE); // Vuelve a blanco
             }
         });
 
@@ -144,6 +157,20 @@ public class PantallaPrincipal extends JFrame {
         boton.setFocusPainted(false);
         boton.setBorderPainted(false);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // --- EFECTO HOVER ROJO ---
+
+        boton.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                boton.setForeground(new Color(231, 76, 60)); // Rojo Prime
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                boton.setForeground(Color.WHITE); // Vuelve a blanco
+            }
+        });
 
         try {
             ImageIcon icono = new ImageIcon(rutaIcono);

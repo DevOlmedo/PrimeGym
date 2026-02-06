@@ -48,10 +48,10 @@ public class SocioDAO {
                 } catch (Exception e) {}
 
                 morosos.add(new Object[]{
-                        socio[1] + " " + socio[2],
-                        socio[0],
-                        vencimientoStr,
-                        diasAtraso + " días"
+                        socio[1] + " " + socio[2], // String (Nombre Completo)
+                        socio[0],                 // Integer (DNI)
+                        vencimientoStr,           // String (Fecha)
+                        diasAtraso + " días"      // String (Diferencia de tiempo)
                 });
             }
         }
