@@ -2,9 +2,14 @@ package ui.pestañas;
 
 import dao.SocioDAO;
 import dao.PagoDAO;
+import dao.CierreDAO; // Importación necesaria
+import ui.dialogos.DialogoConfirmacion;
+import ui.dialogos.DialogoExito;
+
 import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.time.LocalDate;
 import java.util.List;
 
 public class PanelCaja extends JPanel {
@@ -14,6 +19,7 @@ public class PanelCaja extends JPanel {
     private DefaultTableModel modeloTabla;
     private SocioDAO socioDAO = new SocioDAO();
     private PagoDAO pagoDAO = new PagoDAO();
+    private CierreDAO cierreDAO = new CierreDAO();
 
     public PanelCaja() {
         setBackground(new Color(25, 25, 25));
@@ -77,7 +83,7 @@ public class PanelCaja extends JPanel {
         pnlCentro.add(pnlForm);
         pnlCentro.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // --- TABLA DE HISTORIAL (CON BORDE MINUCIOSO) ---
+        // --- HISTORIAL ---
 
         modeloTabla = new DefaultTableModel(new String[]{"DNI SOCIO", "MONTO", "FECHA", "MÉTODO"}, 0);
         tablaPagos = new JTable(modeloTabla);
@@ -87,27 +93,61 @@ public class PanelCaja extends JPanel {
         scroll.setPreferredSize(new Dimension(750, 250));
         scroll.getViewport().setBackground(new Color(25, 25, 25));
         scroll.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60), 1));
-        scroll.getVerticalScrollBar().setUnitIncrement(12);
-
-        // Panel para el título superior de la tabla
 
         JPanel pnlMargenTabla = new JPanel(new BorderLayout());
         pnlMargenTabla.setOpaque(false);
-        pnlMargenTabla.setBorder(BorderFactory.createEmptyBorder(0, 50, 20, 50));
+        pnlMargenTabla.setBorder(BorderFactory.createEmptyBorder(0, 50, 10, 50));
 
         JLabel lblHist = new JLabel("HISTORIAL RECIENTE");
         lblHist.setFont(new Font("Segoe UI", Font.BOLD, 11));
         lblHist.setForeground(new Color(120, 120, 120));
-        lblHist.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
-
         pnlMargenTabla.add(lblHist, BorderLayout.NORTH);
         pnlMargenTabla.add(scroll, BorderLayout.CENTER);
 
         pnlCentro.add(pnlMargenTabla);
+
+        // --- BOTÓN CIERRE DE CAJA ---
+
+        JPanel pnlSurCierre = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        pnlSurCierre.setOpaque(false);
+        pnlSurCierre.setBorder(BorderFactory.createEmptyBorder(0, 0, 30, 0));
+
+        JButton btnCerrarCaja = crearBotonNaranjaPrime("CERRAR CAJA DE HOY");
+        pnlSurCierre.add(btnCerrarCaja);
+
         add(pnlCentro, BorderLayout.CENTER);
+        add(pnlSurCierre, BorderLayout.SOUTH);
+
+        // Eventos
 
         btnCobrar.addActionListener(e -> ejecutarCobro());
+        btnCerrarCaja.addActionListener(e -> ejecutarCierreManual());
         cargarUltimosPagos();
+    }
+
+    private void ejecutarCierreManual() {
+        LocalDate hoy = LocalDate.now();
+        boolean yaExiste = cierreDAO.yaEstaCerrado(hoy);
+
+        // Mensaje Dinamico
+
+        String mensaje = yaExiste
+                ? "¿Deseas ACTUALIZAR el cierre de hoy con los nuevos movimientos?"
+                : "¿Deseas realizar el cierre de caja de la jornada actual?";
+
+        Frame padre = (Frame) SwingUtilities.getWindowAncestor(this);
+        DialogoConfirmacion diag = new DialogoConfirmacion(padre, mensaje);
+
+        diag.setVisible(true);
+
+        if (diag.getRespuesta()) {
+            cierreDAO.ejecutarCierre(hoy, false);
+
+            String textoExito = yaExiste ? "CIERRE ACTUALIZADO" : "CAJA CERRADA";
+            String cuerpoMsg = "Los registros de hoy han sido guardados correctamente.";
+
+            new DialogoExito(padre, textoExito, cuerpoMsg).setVisible(true);
+        }
     }
 
     private void ejecutarCobro() {
@@ -137,21 +177,28 @@ public class PanelCaja extends JPanel {
         }
     }
 
-    private void estilizarTablaPrime(JTable t) {
-        t.setBackground(new Color(25, 25, 25));
-        t.setForeground(new Color(220, 220, 220));
-        t.setRowHeight(35);
-        t.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        t.setSelectionBackground(new Color(255, 140, 0, 100));
-        t.setSelectionForeground(Color.WHITE);
-        t.setGridColor(new Color(45, 45, 45));
-        t.setShowGrid(true);
+    // Estilo Naranja para el Cierre
 
-        JTableHeader header = t.getTableHeader();
-        header.setBackground(new Color(35, 35, 35));
-        header.setForeground(Color.WHITE);
-        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(60, 60, 60)));
+    private JButton crearBotonNaranjaPrime(String t) {
+        JButton btn = new JButton(t) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? new Color(255, 100, 0) : new Color(255, 140, 0));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setPreferredSize(new Dimension(280, 45));
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        return btn;
     }
 
     private JButton crearBotonRojoPrime(String t) {
@@ -174,6 +221,23 @@ public class PanelCaja extends JPanel {
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         return btn;
+    }
+
+    private void estilizarTablaPrime(JTable t) {
+        t.setBackground(new Color(25, 25, 25));
+        t.setForeground(new Color(220, 220, 220));
+        t.setRowHeight(35);
+        t.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        t.setSelectionBackground(new Color(255, 140, 0, 100));
+        t.setSelectionForeground(Color.WHITE);
+        t.setGridColor(new Color(45, 45, 45));
+        t.setShowGrid(true);
+
+        JTableHeader header = t.getTableHeader();
+        header.setBackground(new Color(35, 35, 35));
+        header.setForeground(Color.WHITE);
+        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(60, 60, 60)));
     }
 
     private void mostrarMensajeOscuro(String msg) {

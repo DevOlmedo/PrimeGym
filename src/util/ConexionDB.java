@@ -19,11 +19,10 @@ public class ConexionDB {
         return conn;
     }
 
-    // Este método crea las tablas
-
+    // Crea y verifica la existencia de todas las tablas necesarias
     public static void crearTablas() {
 
-        // Tabla de Socios
+        // 1. Tabla de Socios
 
         String sqlSocios = "CREATE TABLE IF NOT EXISTS socios ("
                 + "dni INTEGER PRIMARY KEY,"
@@ -34,7 +33,7 @@ public class ConexionDB {
                 + "cuota_al_dia INTEGER DEFAULT 1"
                 + ");";
 
-        // Tabla de Pagos
+        // 2. Tabla de Pagos
 
         String sqlPagos = "CREATE TABLE IF NOT EXISTS pagos ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -45,7 +44,7 @@ public class ConexionDB {
                 + "FOREIGN KEY (socio_dni) REFERENCES socios(dni)"
                 + ");";
 
-        // Tabla de Productos para el Market
+        // 3. Tabla de Productos para el Market
 
         String sqlProductos = "CREATE TABLE IF NOT EXISTS productos ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -56,14 +55,26 @@ public class ConexionDB {
                 + "ruta_imagen TEXT"
                 + ");";
 
+        // 4. Tabla de Cierres de Caja
+
+        String sqlCierres = "CREATE TABLE IF NOT EXISTS cierres_caja ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "fecha TEXT UNIQUE," // UNIQUE evita dos cierres el mismo día
+                + "efectivo REAL,"
+                + "mercado_pago REAL,"
+                + "total REAL,"
+                + "auto_cerrado INTEGER DEFAULT 0" // 1 si fue por el timer, 0 si fue manual
+                + ");";
+
         try (Connection conn = conectar();
              Statement stmt = conn.createStatement()) {
 
             stmt.execute(sqlSocios);
             stmt.execute(sqlPagos);
             stmt.execute(sqlProductos);
+            stmt.execute(sqlCierres);
 
-            System.out.println("✅ Base de datos lista: tablas 'socios', 'pagos' y 'productos' verificadas.");
+            System.out.println("✅ Base de datos lista: tablas verificadas (Socios, Pagos, Productos, Cierres).");
         } catch (SQLException e) {
             System.err.println("Error al crear tablas: " + e.getMessage());
         }
