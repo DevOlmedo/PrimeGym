@@ -11,15 +11,11 @@ public class DialogoNuevoSocio extends JDialog {
     private JComboBox<String> comboPlan;
     private JButton btnGuardar, btnCancelar;
     private SocioDAO socioDAO;
-    private boolean modoEdicion = false; // Flag para distinguir la acción
-
-    // Constructor para NUEVO SOCIO
+    private boolean modoEdicion = false;
 
     public DialogoNuevoSocio(Frame parent) {
         this(parent, null);
     }
-
-    // Constructor para EDITAR SOCIO (recibe los datos de la fila seleccionada)
 
     public DialogoNuevoSocio(Frame parent, Object[] datosSocio) {
         super(parent, "Registrar Nuevo Socio", true);
@@ -58,8 +54,6 @@ public class DialogoNuevoSocio extends JDialog {
         panelForm.add(crearLabel("Vencimiento:", labelFont));
         txtVencimiento = crearTextField();
 
-        // Setea fecha automática por defecto
-
         LocalDate proximoMes = LocalDate.now().plusMonths(1);
         DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         txtVencimiento.setText(proximoMes.format(formato));
@@ -67,13 +61,11 @@ public class DialogoNuevoSocio extends JDialog {
 
         add(panelForm, BorderLayout.CENTER);
 
-        // --- CONFIGURACIÓN SI ES EDICIÓN ---
-
         if (datosSocio != null) {
             modoEdicion = true;
             setTitle("Editar Socio");
             txtDni.setText(String.valueOf(datosSocio[0]));
-            txtDni.setEditable(false); // No permitimos editar el DNI (es la clave única)
+            txtDni.setEditable(false);
             txtNombre.setText((String) datosSocio[1]);
             txtApellido.setText((String) datosSocio[2]);
             comboPlan.setSelectedItem(datosSocio[3]);
@@ -85,18 +77,37 @@ public class DialogoNuevoSocio extends JDialog {
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
         panelBotones.setOpaque(false);
 
-        btnGuardar = new JButton(modoEdicion ? "ACTUALIZAR" : "GUARDAR SOCIO");
-        btnGuardar.setPreferredSize(new Dimension(150, 35));
-        btnGuardar.setBackground(new Color(255, 140, 0));
-        btnGuardar.setForeground(Color.WHITE);
-        btnGuardar.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnGuardar.setFocusPainted(false);
-        btnGuardar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // BOTÓN GUARDAR/ACTUALIZAR
 
-        btnCancelar = new JButton("CANCELAR");
-        btnCancelar.setPreferredSize(new Dimension(120, 35));
-        btnCancelar.setBackground(new Color(70, 70, 70));
-        btnCancelar.setForeground(Color.WHITE);
+        btnGuardar = new JButton(modoEdicion ? "ACTUALIZAR" : "GUARDAR SOCIO") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color rojoPrime = new Color(180, 0, 0);
+                g2.setColor(getModel().isRollover() ? rojoPrime.darker() : rojoPrime);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        estilizarBotonEmergente(btnGuardar);
+
+        // BOTÓN CANCELAR
+
+        btnCancelar = new JButton("CANCELAR") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color grisOscuro = new Color(70, 70, 70);
+                g2.setColor(getModel().isRollover() ? grisOscuro.darker() : grisOscuro);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        estilizarBotonEmergente(btnCancelar);
 
         btnGuardar.addActionListener(e -> guardar());
         btnCancelar.addActionListener(e -> dispose());
@@ -110,9 +121,22 @@ public class DialogoNuevoSocio extends JDialog {
         setLocationRelativeTo(parent);
     }
 
+    private void estilizarBotonEmergente(JButton btn) {
+        btn.setPreferredSize(new Dimension(160, 40));
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+    }
+
     private void guardar() {
+
+        Frame padre = (Frame) SwingUtilities.getWindowAncestor(this);
+
         if (txtDni.getText().isEmpty() || txtNombre.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El DNI y el Nombre son obligatorios.");
+            new DialogoAviso(padre, "⚠ El DNI y el Nombre son obligatorios.").setVisible(true);
             return;
         }
 
@@ -123,24 +147,21 @@ public class DialogoNuevoSocio extends JDialog {
             String plan = (String) comboPlan.getSelectedItem();
             String venc = txtVencimiento.getText().trim();
 
-            boolean exito;
-            if (modoEdicion) {
-
-                // Si estamos editando, usamos el nuevo método UPDATE
-
-                exito = socioDAO.editarSocio(dni, nom, ape, plan, venc);
-            } else {
-                exito = socioDAO.guardarSocio(dni, nom, ape, plan, venc);
-            }
+            boolean exito = modoEdicion ?
+                    socioDAO.editarSocio(dni, nom, ape, plan, venc) :
+                    socioDAO.guardarSocio(dni, nom, ape, plan, venc);
 
             if (exito) {
-                JOptionPane.showMessageDialog(this, "✅ Operación realizada con éxito.");
+                String titulo = modoEdicion ? "SOCIO ACTUALIZADO" : "SOCIO REGISTRADO";
+                new DialogoExito(padre, titulo, "Los datos de " + nom + " se guardaron correctamente.").setVisible(true);
                 dispose();
             } else {
-                JOptionPane.showMessageDialog(this, "❌ Error al procesar los datos.");
+                // Error de base de datos o DNI duplicado
+                new DialogoAviso(padre, "❌ Error al procesar los datos. Verifica si el DNI ya existe.").setVisible(true);
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Error: El DNI debe ser un número válido.");
+            // Error de entrada de texto
+            new DialogoAviso(padre, "⚠ Error: El DNI debe ser un número válido.").setVisible(true);
         }
     }
 

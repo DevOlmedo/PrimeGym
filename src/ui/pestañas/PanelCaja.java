@@ -3,8 +3,10 @@ package ui.pestañas;
 import dao.SocioDAO;
 import dao.PagoDAO;
 import dao.CierreDAO; // Importación necesaria
+import ui.dialogos.DialogoAviso;
 import ui.dialogos.DialogoConfirmacion;
 import ui.dialogos.DialogoExito;
+import logic.GeneradorReporte;
 
 import javax.swing.*;
 import javax.swing.table.*;
@@ -129,43 +131,79 @@ public class PanelCaja extends JPanel {
         LocalDate hoy = LocalDate.now();
         boolean yaExiste = cierreDAO.yaEstaCerrado(hoy);
 
-        // Mensaje Dinamico
+        // Mensaje dinámico para informar sobre el PDF
 
         String mensaje = yaExiste
-                ? "¿Deseas ACTUALIZAR el cierre de hoy con los nuevos movimientos?"
-                : "¿Deseas realizar el cierre de caja de la jornada actual?";
+                ? "¿Deseas ACTUALIZAR el cierre de hoy y generar el nuevo reporte PDF?"
+                : "¿Deseas realizar el cierre de caja y generar el reporte PDF?";
 
         Frame padre = (Frame) SwingUtilities.getWindowAncestor(this);
         DialogoConfirmacion diag = new DialogoConfirmacion(padre, mensaje);
-
         diag.setVisible(true);
 
         if (diag.getRespuesta()) {
+
+            // Primero ejecuta el cierre en la Base de Datos
+
             cierreDAO.ejecutarCierre(hoy, false);
 
-            String textoExito = yaExiste ? "CIERRE ACTUALIZADO" : "CAJA CERRADA";
-            String cuerpoMsg = "Los registros de hoy han sido guardados correctamente.";
+            try {
+                // Despues obtiene los totales actualizados para el reporte
 
-            new DialogoExito(padre, textoExito, cuerpoMsg).setVisible(true);
+                double totalEfectivo = cierreDAO.getEfectivoPorFecha(hoy);
+                double totalMP = cierreDAO.getMercadoPagoPorFecha(hoy);
+
+                // Dispara la generación del PDF
+
+                GeneradorReporte generador = new GeneradorReporte();
+                generador.generarCierreCaja(padre, totalEfectivo, totalMP);
+
+            } catch (Exception ex) {
+
+                // En caso de que falle la lectura de montos o la creación del archivo
+
+                new DialogoAviso(padre, "Error al procesar el reporte: " + ex.getMessage()).setVisible(true);
+            }
         }
     }
 
     private void ejecutarCobro() {
+        Frame f = (Frame) SwingUtilities.getWindowAncestor(this);
+
         try {
+
+            // Validación previa de campos vacíos
+
+            if (txtDni.getText().trim().isEmpty() || txtMonto.getText().trim().isEmpty()) {
+                new DialogoAviso(f, "⚠ Debes ingresar el DNI y el Monto para procesar el cobro.").setVisible(true);
+                return;
+            }
+
             int dni = Integer.parseInt(txtDni.getText().trim());
             double monto = Double.parseDouble(txtMonto.getText().trim());
             String metodo = (String) comboMetodo.getSelectedItem();
+
+            // Proceso de Registro
 
             if (pagoDAO.registrarPago(dni, monto, metodo)) {
                 if (socioDAO.renovarSocio(dni)) {
                     txtDni.setText("");
                     txtMonto.setText("");
                     cargarUltimosPagos();
-                    mostrarMensajeOscuro("✅ Pago registrado con " + metodo);
+                    new DialogoExito(f, "PAGO Y RENOVACIÓN",
+                            "Socio DNI " + dni + " renovado con éxito via " + metodo).setVisible(true);
                 }
+            } else {
+
+                // Error si el DNI no existe o falla la DB
+
+                new DialogoAviso(f, "❌ No se pudo registrar el pago. Verifique si el socio existe.").setVisible(true);
             }
+
+        } catch (NumberFormatException ex) {
+            new DialogoAviso(f, "⚠ Error: El DNI y el Monto deben ser valores numéricos.").setVisible(true);
         } catch (Exception ex) {
-            mostrarMensajeOscuro("❌ Error: Verifique los datos ingresados.");
+            new DialogoAviso(f, "❌ Error inesperado: " + ex.getMessage()).setVisible(true);
         }
     }
 
@@ -207,19 +245,31 @@ public class PanelCaja extends JPanel {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getModel().isRollover() ? new Color(220, 0, 0) : new Color(180, 0, 0));
+                Color rojoPrime = new Color(180, 0, 0);
+                if (getModel().isRollover()) {
+                    g2.setColor(rojoPrime.darker());
+                } else {
+                    g2.setColor(rojoPrime);
+                }
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
+
+        // Configuración de estilo y dimensiones
+
         btn.setPreferredSize(new Dimension(350, 50));
         btn.setForeground(Color.WHITE);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Limpieza de estilos default de Java
+
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
+        btn.setFocusPainted(false); // Elimina el recuadro blanco de enfoque
+
         return btn;
     }
 

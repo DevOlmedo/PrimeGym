@@ -8,6 +8,7 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 import java.awt.*;
+import java.awt.geom.RoundRectangle2D;
 
 public class DialogoVenta extends JDialog {
     private boolean respuesta = false;
@@ -17,114 +18,88 @@ public class DialogoVenta extends JDialog {
     public DialogoVenta(Frame parent, Producto p) {
         super(parent, true);
         setUndecorated(true);
-        setSize(400, 460);
+        setSize(400, 480);
         setLocationRelativeTo(parent);
+        setShape(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), 30, 30));
 
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(30, 30, 30));
-        panel.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60), 2));
+        JPanel panel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(30, 30, 30)); // Fondo Dark
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+                g2.setColor(new Color(60, 60, 60)); // Borde sutil
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 30, 30);
+                g2.dispose();
+            }
+        };
+        panel.setOpaque(false);
 
         // --- Título ---
 
         JLabel lblTitulo = new JLabel("CONFIRMAR VENTA RÁPIDA", SwingConstants.CENTER);
-        lblTitulo.setForeground(new Color(255, 140, 0));
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblTitulo.setBorder(BorderFactory.createEmptyBorder(20, 0, 10, 0));
+        lblTitulo.setForeground(new Color(180, 0, 0)); // Rojo Prime
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitulo.setBorder(BorderFactory.createEmptyBorder(25, 0, 10, 0));
 
         // --- Cuerpo Central ---
 
         JPanel centro = new JPanel();
         centro.setLayout(new BoxLayout(centro, BoxLayout.Y_AXIS));
         centro.setOpaque(false);
-        centro.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
+        centro.setBorder(BorderFactory.createEmptyBorder(10, 40, 10, 40));
 
-        JLabel lblMsg = new JLabel("<html><center>¿Deseas registrar la venta de:<br><b style='font-size:16px; color:white;'>"
+        JLabel lblMsg = new JLabel("<html><center>¿Deseas registrar la venta de:<br><b style='font-size:15px; color:white;'>"
                 + p.getNombre() + "</b></center></html>", SwingConstants.CENTER);
         lblMsg.setForeground(Color.LIGHT_GRAY);
         lblMsg.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel lblPrecio = new JLabel("$ " + String.format("%.2f", p.getPrecio()), SwingConstants.CENTER);
-        lblPrecio.setFont(new Font("Segoe UI", Font.BOLD, 32));
-        lblPrecio.setForeground(new Color(46, 204, 113));
+        lblPrecio.setFont(new Font("Segoe UI", Font.BOLD, 36));
+        lblPrecio.setForeground(new Color(46, 204, 113)); // Verde para dinero
         lblPrecio.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblPrecio.setBorder(BorderFactory.createEmptyBorder(10, 0, 15, 0));
 
-        // --- Selector de Método de Pago ---
+        // Metodo de pago y DNI (Ajuste visual)
 
-        JLabel lblMetodo = new JLabel("Método de pago:");
-        lblMetodo.setForeground(Color.GRAY);
-        lblMetodo.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblMetodo.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        String[] opciones = {"Efectivo", "Mercado Pago"};
-        comboMetodo = new JComboBox<>(opciones);
-        comboMetodo.setMaximumSize(new Dimension(220, 35));
-        comboMetodo.setBackground(new Color(45, 45, 45));
-        comboMetodo.setForeground(Color.WHITE);
-        comboMetodo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        comboMetodo.setAlignmentX(Component.CENTER_ALIGNMENT);
-        comboMetodo.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)));
-
-        // --- Campo DNI Socio (Opcional) ---
-
-        JLabel lblDni = new JLabel("DNI Socio (Opcional):");
-        lblDni.setForeground(Color.GRAY);
-        lblDni.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblDni.setAlignmentX(Component.CENTER_ALIGNMENT);
-        lblDni.setBorder(BorderFactory.createEmptyBorder(15, 0, 5, 0));
-
-        txtDniSocio = new JTextField();
-        txtDniSocio.setMaximumSize(new Dimension(220, 35));
-        txtDniSocio.setBackground(new Color(45, 45, 45));
-        txtDniSocio.setForeground(Color.WHITE);
-        txtDniSocio.setCaretColor(Color.WHITE);
-        txtDniSocio.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        txtDniSocio.setHorizontalAlignment(JTextField.CENTER);
-        txtDniSocio.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)));
-
-        // CAPA DE SEGURIDAD 1: Filtro para impedir letras
-
-        ((AbstractDocument) txtDniSocio.getDocument()).setDocumentFilter(new DocumentFilter() {
-            @Override
-            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
-                if (string.matches("\\d+")) super.insertString(fb, offset, string, attr);
-            }
-            @Override
-            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
-                if (text.matches("\\d+")) super.replace(fb, offset, length, text, attrs);
-            }
-        });
+        comboMetodo = crearComboBoxPrime(new String[]{"Efectivo", "Mercado Pago"});
+        txtDniSocio = crearTextFieldPrime();
 
         centro.add(lblMsg);
         centro.add(lblPrecio);
-        centro.add(lblMetodo);
+        centro.add(crearEtiquetaGuia("Método de pago:"));
         centro.add(Box.createVerticalStrut(5));
         centro.add(comboMetodo);
-        centro.add(lblDni);
+        centro.add(Box.createVerticalStrut(15));
+        centro.add(crearEtiquetaGuia("DNI Socio (Opcional):"));
+        centro.add(Box.createVerticalStrut(5));
         centro.add(txtDniSocio);
 
-        // --- Botones Inferiores ---
+        // Filtro de DNI
 
-        JPanel sur = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        ((AbstractDocument) txtDniSocio.getDocument()).setDocumentFilter(new DocumentFilter() {
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+                if (text.matches("\\d*")) super.replace(fb, offset, length, text, attrs);
+            }
+        });
+
+        // --- Botones Inferiores Unificados ---
+
+        JPanel sur = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 25));
         sur.setOpaque(false);
 
-        JButton btnCance = crearBotonEstilo("CANCELAR", new Color(70, 70, 70));
-        JButton btnAcept = crearBotonEstilo("ACEPTAR", new Color(180, 0, 0));
+        JButton btnCance = crearBotonPrime("CANCELAR", new Color(70, 70, 70));
+        JButton btnAcept = crearBotonPrime("ACEPTAR", new Color(180, 0, 0));
 
         btnCance.addActionListener(e -> { respuesta = false; dispose(); });
-
-        // CAPA DE SEGURIDAD 2: Validación de existencia en DB
-
         btnAcept.addActionListener(e -> {
             int dni = getDniIngresado();
-            if (dni != 0) {
-                if (!new SocioDAO().existeSocio(dni)) {
-                    JOptionPane.showMessageDialog(this,
-                            "ERROR: El DNI " + dni + " no existe en la base de socios.\n" +
-                                    "La venta se registrará como ANÓNIMA.",
-                            "Socio no encontrado", JOptionPane.WARNING_MESSAGE);
-                    txtDniSocio.setText(""); // Limpiamos para que getDniIngresado devuelva 0
-                }
+            if (dni != 0 && !new SocioDAO().existeSocio(dni)) {
+                new DialogoAviso((Frame)parent, "El DNI " + dni + " no existe. La venta será anónima.").setVisible(true);
+                txtDniSocio.setText("");
             }
             respuesta = true;
             dispose();
@@ -139,21 +114,22 @@ public class DialogoVenta extends JDialog {
         add(panel);
     }
 
-    private JButton crearBotonEstilo(String texto, Color bg) {
+    // --- MÉTODOS DE ESTILO ---
+
+    private JButton crearBotonPrime(String texto, Color bg) {
         JButton b = new JButton(texto) {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                if (getModel().isRollover()) g2.setColor(bg.brighter());
-                else g2.setColor(bg);
+                g2.setColor(getModel().isRollover() ? bg.darker() : bg);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
-        b.setPreferredSize(new Dimension(140, 45));
+        b.setPreferredSize(new Dimension(130, 40));
         b.setForeground(Color.WHITE);
-        b.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        b.setFont(new Font("Segoe UI", Font.BOLD, 13));
         b.setFocusPainted(false);
         b.setContentAreaFilled(false);
         b.setBorderPainted(false);
@@ -161,13 +137,40 @@ public class DialogoVenta extends JDialog {
         return b;
     }
 
+    private JTextField crearTextFieldPrime() {
+        JTextField t = new JTextField();
+        t.setMaximumSize(new Dimension(240, 35));
+        t.setBackground(new Color(45, 45, 45));
+        t.setForeground(Color.WHITE);
+        t.setCaretColor(Color.WHITE);
+        t.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        t.setHorizontalAlignment(JTextField.CENTER);
+        t.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)));
+        return t;
+    }
+
+    private JComboBox<String> crearComboBoxPrime(String[] items) {
+        JComboBox<String> cb = new JComboBox<>(items);
+        cb.setMaximumSize(new Dimension(240, 35));
+        cb.setBackground(new Color(45, 45, 45));
+        cb.setForeground(Color.WHITE);
+        cb.setFocusable(false);
+        return cb;
+    }
+
+    private JLabel crearEtiquetaGuia(String texto) {
+        JLabel l = new JLabel(texto);
+        l.setForeground(Color.GRAY);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setAlignmentX(Component.CENTER_ALIGNMENT);
+        return l;
+    }
+
     public int getDniIngresado() {
         try {
             String texto = txtDniSocio.getText().trim();
             return texto.isEmpty() ? 0 : Integer.parseInt(texto);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
+        } catch (NumberFormatException e) { return 0; }
     }
 
     public String getMetodoSeleccionado() { return (String) comboMetodo.getSelectedItem(); }

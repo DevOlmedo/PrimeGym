@@ -3,6 +3,8 @@ package ui.dialogos;
 import javax.swing.*;
 import java.awt.*;
 
+/*  **/
+
 public class DialogoExito extends JDialog {
 
     // --- CONSTRUCTOR SIMPLE (Para Cierre de Caja, etc.) ---
@@ -98,8 +100,8 @@ public class DialogoExito extends JDialog {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color colorBase = new Color(255, 80, 80);
-                g2.setColor(getModel().isRollover() ? colorBase.brighter() : colorBase);
+                Color rojoPrime = new Color(180, 0, 0);
+                g2.setColor(getModel().isRollover() ? rojoPrime.darker() : rojoPrime);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
                 g2.dispose();
                 super.paintComponent(g);
