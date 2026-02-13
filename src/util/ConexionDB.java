@@ -19,7 +19,6 @@ public class ConexionDB {
         return conn;
     }
 
-    // Crea y verifica la existencia de todas las tablas necesarias
     public static void crearTablas() {
 
         // 1. Tabla de Socios
@@ -59,22 +58,64 @@ public class ConexionDB {
 
         String sqlCierres = "CREATE TABLE IF NOT EXISTS cierres_caja ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + "fecha TEXT UNIQUE," // UNIQUE evita dos cierres el mismo día
+                + "fecha TEXT UNIQUE,"
                 + "efectivo REAL,"
                 + "mercado_pago REAL,"
                 + "total REAL,"
-                + "auto_cerrado INTEGER DEFAULT 0" // 1 si fue por el timer, 0 si fue manual
+                + "auto_cerrado INTEGER DEFAULT 0"
+                + ");";
+
+        // 5. Tabla de Instructores
+
+        String sqlInstructores = "CREATE TABLE IF NOT EXISTS instructores ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "nombre TEXT NOT NULL,"
+                + "telefono TEXT,"
+                + "edad TEXT,"
+                + "email TEXT,"
+                + "especialidad TEXT,"
+                + "estado INTEGER DEFAULT 1"
+                + ");";
+
+        // 6. Tabla de Actividades con Gestión de Cupos
+
+        String sqlActividades = "CREATE TABLE IF NOT EXISTS actividades ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "nombre TEXT NOT NULL,"
+                + "instructor_id INTEGER,"
+                + "cupo_maximo INTEGER DEFAULT 20,"
+                + "horario TEXT,"
+                + "dias TEXT,"
+                + "FOREIGN KEY (instructor_id) REFERENCES instructores(id)"
+                + ");";
+
+        // 7. Tabla de Inscripciones
+
+        String sqlInscripciones = "CREATE TABLE IF NOT EXISTS inscripciones ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "socio_dni INTEGER,"
+                + "actividad_id INTEGER,"
+                + "fecha_inscripcion TEXT,"
+                + "FOREIGN KEY (socio_dni) REFERENCES socios(dni),"
+                + "FOREIGN KEY (actividad_id) REFERENCES actividades(id)"
                 + ");";
 
         try (Connection conn = conectar();
              Statement stmt = conn.createStatement()) {
 
+            // Habilitar claves foráneas
+
+            stmt.execute("PRAGMA foreign_keys = ON;");
+
             stmt.execute(sqlSocios);
             stmt.execute(sqlPagos);
             stmt.execute(sqlProductos);
             stmt.execute(sqlCierres);
+            stmt.execute(sqlInstructores);
+            stmt.execute(sqlActividades);
+            stmt.execute(sqlInscripciones);
 
-            System.out.println("✅ Base de datos lista: tablas verificadas (Socios, Pagos, Productos, Cierres).");
+            System.out.println("✅ Base de datos lista: tablas verificadas (Socios, Pagos, Market, Cierres, Staff, Actividades, Inscripciones).");
         } catch (SQLException e) {
             System.err.println("Error al crear tablas: " + e.getMessage());
         }
