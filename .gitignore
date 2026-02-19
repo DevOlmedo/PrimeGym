@@ -4,6 +4,7 @@
 out/
 gen/
 .vscode/
+/target/
 
 # --- Base de Datos ---
 *.db

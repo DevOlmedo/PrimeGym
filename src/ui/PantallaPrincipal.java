@@ -111,6 +111,8 @@ public class PantallaPrincipal extends JFrame {
 
         menu.add(Box.createRigidArea(new Dimension(0, 40)));
 
+        // OPCIONES PRINCIPALES
+
         String[] opciones = {"Acceso", "Socios", "Actividades", "Instructores", "Caja", "Estadísticas", "Market", "Whatsapp"};
 
         for (String texto : opciones) {
@@ -118,56 +120,9 @@ public class PantallaPrincipal extends JFrame {
             JButton btn = crearBotonMenu(" " + texto, rutaIcono);
 
             if (texto.equals("Estadísticas")) {
-                JPopupMenu popup = new JPopupMenu();
-                popup.setBackground(new Color(35, 35, 35));
-                popup.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
-
-                JMenuItem itemReportes = crearItemPopup("Reportes Diarios");
-                JMenuItem itemMorosos = crearItemPopup("Lista de Morosos");
-
-                // Eventos de navegación del submenú
-
-                itemReportes.addActionListener(e -> cardLayout.show(panelCentral, "Reportes"));
-                itemMorosos.addActionListener(e -> cardLayout.show(panelCentral, "Morosos"));
-
-                popup.add(itemReportes);
-                popup.add(itemMorosos);
-
-                btn.addMouseListener(new java.awt.event.MouseAdapter() {
-                    @Override
-                    public void mouseEntered(java.awt.event.MouseEvent e) {
-                        btn.setForeground(new Color(231, 76, 60));
-                        popup.show(btn, btn.getWidth() - 1, 0);
-                    }
-
-                    @Override
-                    public void mouseExited(java.awt.event.MouseEvent e) {
-                        Point p = e.getLocationOnScreen();
-                        SwingUtilities.convertPointFromScreen(p, btn);
-
-                        if (p.x < btn.getWidth() - 5) {
-                            Timer timer = new Timer(100, ex -> {
-                                if (!popup.getVisibleRect().contains(MouseInfo.getPointerInfo().getLocation())) {
-                                    btn.setForeground(Color.WHITE);
-                                }
-                            });
-                            timer.setRepeats(false);
-                            timer.start();
-                        }
-                    }
-                });
-
-                popup.addMouseListener(new java.awt.event.MouseAdapter() {
-                    @Override
-                    public void mouseExited(java.awt.event.MouseEvent e) {
-                        if (!popup.getBounds().contains(e.getPoint())) {
-                            popup.setVisible(false);
-                            btn.setForeground(Color.WHITE);
-                        }
-                    }
-                });
-
-                btn.addActionListener(e -> cardLayout.show(panelCentral, "Estadísticas"));
+                configurarBotonEstadisticas(btn);
+            } else if (texto.equals("Whatsapp")) {
+                configurarBotonWhatsapp(btn); // <-- NUEVO SUBMENÚ
             } else {
                 btn.addActionListener(e -> cardLayout.show(panelCentral, texto.trim()));
             }
@@ -175,8 +130,94 @@ public class PantallaPrincipal extends JFrame {
             menu.add(btn);
             menu.add(Box.createRigidArea(new Dimension(0, 15)));
         }
+
         menu.add(Box.createVerticalGlue());
+
+        // BOTÓN DE SOPORTE
+
+        JButton btnSoporte = crearBotonMenu(" Soporte", "src/assets/soporte.png");
+        btnSoporte.addActionListener(e -> cardLayout.show(panelCentral, "Soporte"));
+
+        menu.add(btnSoporte);
+        menu.add(Box.createRigidArea(new Dimension(0, 20)));
+
         return menu;
+    }
+
+    private void configurarBotonWhatsapp(JButton btn) {
+        JPopupMenu popup = new JPopupMenu();
+        popup.setBackground(new Color(35, 35, 35));
+        popup.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+
+        JMenuItem itemMasivo = crearItemPopup("Difusión Masiva");
+        JMenuItem itemPagos = crearItemPopup("Recordar Pagos");
+        JMenuItem itemIndividual = crearItemPopup("Mensaje Individual");
+        JMenuItem itemCronograma = crearItemPopup("Cronograma Hoy");
+
+        // Eventos
+
+        itemMasivo.addActionListener(e -> mostrarDialogoMensaje("MASIVO"));
+        itemPagos.addActionListener(e -> mostrarDialogoMensaje("PAGOS"));
+        itemIndividual.addActionListener(e -> mostrarDialogoMensaje("INDIVIDUAL"));
+        itemCronograma.addActionListener(e -> mostrarDialogoMensaje("CRONOGRAMA"));
+
+        popup.add(itemMasivo);
+        popup.add(itemPagos);
+        popup.add(itemIndividual);
+        popup.add(itemCronograma);
+
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                btn.setForeground(new Color(37, 211, 102)); // Color Verde WhatsApp
+                popup.show(btn, btn.getWidth() - 1, 0);
+            }
+        });
+    }
+
+    private void mostrarDialogoMensaje(String tipo) {
+        // Aca se va a llamar a un JDialog donde el usuario escriba el texto
+        System.out.println("Abriendo diálogo para: " + tipo);
+    }
+
+
+    private void configurarBotonEstadisticas(JButton btn) {
+        JPopupMenu popup = new JPopupMenu();
+        popup.setBackground(new Color(35, 35, 35));
+        popup.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+
+        JMenuItem itemReportes = crearItemPopup("Reportes Diarios");
+        JMenuItem itemMorosos = crearItemPopup("Lista de Morosos");
+
+        itemReportes.addActionListener(e -> cardLayout.show(panelCentral, "Reportes"));
+        itemMorosos.addActionListener(e -> cardLayout.show(panelCentral, "Morosos"));
+
+        popup.add(itemReportes);
+        popup.add(itemMorosos);
+
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                btn.setForeground(new Color(231, 76, 60));
+                popup.show(btn, btn.getWidth() - 1, 0);
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                Point p = e.getLocationOnScreen();
+                SwingUtilities.convertPointFromScreen(p, btn);
+                if (p.x < btn.getWidth() - 5) {
+                    Timer timer = new Timer(100, ex -> {
+                        if (!popup.isShowing()) {
+                            btn.setForeground(Color.WHITE);
+                        }
+                    });
+                    timer.setRepeats(false);
+                    timer.start();
+                }
+            }
+        });
+
+        btn.addActionListener(e -> cardLayout.show(panelCentral, "Estadísticas"));
     }
 
     private JPanel crearPanelCentral() {
@@ -192,9 +233,10 @@ public class PantallaPrincipal extends JFrame {
         panelCentral.add(new PanelCaja(), "Caja");
         panelCentral.add(new PanelEstadisticas(), "Estadísticas");
         panelCentral.add(new PanelReportes(), "Reportes");
-        panelCentral.add(new PanelMorosos(), "Morosos"); // <--- Agregado correctamente
+        panelCentral.add(new PanelMorosos(), "Morosos");
         panelCentral.add(new PanelMarket(), "Market");
         panelCentral.add(new PanelWhatsapp(), "Whatsapp");
+        panelCentral.add(new PanelSoporte(), "Soporte");
 
         return panelCentral;
     }
@@ -212,12 +254,10 @@ public class PantallaPrincipal extends JFrame {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 item.setBackground(new Color(65, 65, 65));
-                item.setForeground(Color.WHITE);
             }
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
                 item.setBackground(new Color(35, 35, 35));
-                item.setForeground(Color.WHITE);
             }
         });
 
