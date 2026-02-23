@@ -113,7 +113,7 @@ public class PantallaPrincipal extends JFrame {
 
         // OPCIONES PRINCIPALES
 
-        String[] opciones = {"Acceso", "Socios", "Actividades", "Instructores", "Caja", "Estadísticas", "Market", "Whatsapp"};
+        String[] opciones = {"Acceso", "Socios", "Actividades", "Instructores", "Caja", "Estadísticas", "Market"};
 
         for (String texto : opciones) {
             String rutaIcono = "src/assets/" + texto.toLowerCase() + ".png";
@@ -121,8 +121,6 @@ public class PantallaPrincipal extends JFrame {
 
             if (texto.equals("Estadísticas")) {
                 configurarBotonEstadisticas(btn);
-            } else if (texto.equals("Whatsapp")) {
-                configurarBotonWhatsapp(btn); // <-- NUEVO SUBMENÚ
             } else {
                 btn.addActionListener(e -> cardLayout.show(panelCentral, texto.trim()));
             }
@@ -143,43 +141,6 @@ public class PantallaPrincipal extends JFrame {
 
         return menu;
     }
-
-    private void configurarBotonWhatsapp(JButton btn) {
-        JPopupMenu popup = new JPopupMenu();
-        popup.setBackground(new Color(35, 35, 35));
-        popup.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
-
-        JMenuItem itemMasivo = crearItemPopup("Difusión Masiva");
-        JMenuItem itemPagos = crearItemPopup("Recordar Pagos");
-        JMenuItem itemIndividual = crearItemPopup("Mensaje Individual");
-        JMenuItem itemCronograma = crearItemPopup("Cronograma Hoy");
-
-        // Eventos
-
-        itemMasivo.addActionListener(e -> mostrarDialogoMensaje("MASIVO"));
-        itemPagos.addActionListener(e -> mostrarDialogoMensaje("PAGOS"));
-        itemIndividual.addActionListener(e -> mostrarDialogoMensaje("INDIVIDUAL"));
-        itemCronograma.addActionListener(e -> mostrarDialogoMensaje("CRONOGRAMA"));
-
-        popup.add(itemMasivo);
-        popup.add(itemPagos);
-        popup.add(itemIndividual);
-        popup.add(itemCronograma);
-
-        btn.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                btn.setForeground(new Color(37, 211, 102)); // Color Verde WhatsApp
-                popup.show(btn, btn.getWidth() - 1, 0);
-            }
-        });
-    }
-
-    private void mostrarDialogoMensaje(String tipo) {
-        // Aca se va a llamar a un JDialog donde el usuario escriba el texto
-        System.out.println("Abriendo diálogo para: " + tipo);
-    }
-
 
     private void configurarBotonEstadisticas(JButton btn) {
         JPopupMenu popup = new JPopupMenu();
@@ -224,7 +185,7 @@ public class PantallaPrincipal extends JFrame {
         panelCentral = new JPanel(cardLayout);
         panelCentral.setBackground(new Color(30, 30, 30));
 
-        // Registro de todos los paneles
+        // Registro de paneles activos
 
         panelCentral.add(new PanelAcceso(), "Acceso");
         panelCentral.add(new PanelSocios(), "Socios");
@@ -235,7 +196,6 @@ public class PantallaPrincipal extends JFrame {
         panelCentral.add(new PanelReportes(), "Reportes");
         panelCentral.add(new PanelMorosos(), "Morosos");
         panelCentral.add(new PanelMarket(), "Market");
-        panelCentral.add(new PanelWhatsapp(), "Whatsapp");
         panelCentral.add(new PanelSoporte(), "Soporte");
 
         return panelCentral;

@@ -3,11 +3,12 @@ package ui.dialogos;
 import dao.SocioDAO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.RoundRectangle2D;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 public class DialogoNuevoSocio extends JDialog {
-    private JTextField txtDni, txtNombre, txtApellido, txtVencimiento;
+    private JTextField txtDni, txtNombre, txtApellido, txtTelefono, txtVencimiento;
     private JComboBox<String> comboPlan;
     private JButton btnGuardar, btnCancelar;
     private SocioDAO socioDAO;
@@ -18,19 +19,46 @@ public class DialogoNuevoSocio extends JDialog {
     }
 
     public DialogoNuevoSocio(Frame parent, Object[] datosSocio) {
-        super(parent, "Registrar Nuevo Socio", true);
+        super(parent, true);
         this.socioDAO = new SocioDAO();
+        setUndecorated(true);
+        setSize(420, 520);
+        setLocationRelativeTo(parent);
+        setShape(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), 30, 30));
 
-        setLayout(new BorderLayout());
-        getContentPane().setBackground(new Color(35, 35, 35));
+        inicializarInterfaz(parent, datosSocio);
+    }
 
-        // --- PANEL DE FORMULARIO ---
+    private void inicializarInterfaz(Frame parent, Object[] datosSocio) {
+        JPanel panelPrincipal = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(35, 35, 35));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+                g2.setColor(new Color(180, 0, 0));
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, getWidth()-3, getHeight()-3, 30, 30);
+                g2.dispose();
+            }
+        };
+        panelPrincipal.setOpaque(false);
 
-        JPanel panelForm = new JPanel(new GridLayout(5, 2, 10, 15));
+        // --- TÍTULO ---
+
+        JLabel lblTitulo = new JLabel(datosSocio == null ? "REGISTRAR SOCIO" : "EDITAR SOCIO", SwingConstants.CENTER);
+        lblTitulo.setForeground(Color.WHITE);
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTitulo.setBorder(BorderFactory.createEmptyBorder(25, 0, 10, 0));
+
+        // --- FORMULARIO ---
+
+        JPanel panelForm = new JPanel(new GridLayout(6, 2, 10, 20));
         panelForm.setOpaque(false);
-        panelForm.setBorder(BorderFactory.createEmptyBorder(25, 25, 10, 25));
+        panelForm.setBorder(BorderFactory.createEmptyBorder(10, 35, 10, 35));
 
-        Font labelFont = new Font("Segoe UI", Font.BOLD, 14);
+        Font labelFont = new Font("Segoe UI", Font.BOLD, 13);
 
         panelForm.add(crearLabel("DNI:", labelFont));
         txtDni = crearTextField();
@@ -48,95 +76,57 @@ public class DialogoNuevoSocio extends JDialog {
         comboPlan = new JComboBox<>(new String[]{"Musculación", "Crossfit", "Funcional", "Boxeo"});
         comboPlan.setBackground(new Color(50, 50, 50));
         comboPlan.setForeground(Color.WHITE);
-        comboPlan.setUI(new javax.swing.plaf.basic.BasicComboBoxUI());
         panelForm.add(comboPlan);
+
+        panelForm.add(crearLabel("WhatsApp (Cód. Área):", labelFont));
+        txtTelefono = crearTextField();
+        txtTelefono.setToolTipText("Ej: 5491122334455");
+        panelForm.add(txtTelefono);
 
         panelForm.add(crearLabel("Vencimiento:", labelFont));
         txtVencimiento = crearTextField();
-
-        LocalDate proximoMes = LocalDate.now().plusMonths(1);
         DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        txtVencimiento.setText(proximoMes.format(formato));
+        txtVencimiento.setText(LocalDate.now().plusMonths(1).format(formato));
         panelForm.add(txtVencimiento);
 
-        add(panelForm, BorderLayout.CENTER);
+        // --- CARGAR DATOS SI ES EDICIÓN ---
 
         if (datosSocio != null) {
             modoEdicion = true;
-            setTitle("Editar Socio");
             txtDni.setText(String.valueOf(datosSocio[0]));
             txtDni.setEditable(false);
             txtNombre.setText((String) datosSocio[1]);
             txtApellido.setText((String) datosSocio[2]);
             comboPlan.setSelectedItem(datosSocio[3]);
-            txtVencimiento.setText((String) datosSocio[4]);
+            txtTelefono.setText((String) datosSocio[4]); // Carga el teléfono
+            txtVencimiento.setText((String) datosSocio[5]);
         }
 
-        // --- PANEL DE BOTONES ---
+        // --- BOTONES ---
 
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 25));
         panelBotones.setOpaque(false);
 
-        // BOTÓN GUARDAR/ACTUALIZAR
-
-        btnGuardar = new JButton(modoEdicion ? "ACTUALIZAR" : "GUARDAR SOCIO") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color rojoPrime = new Color(180, 0, 0);
-                g2.setColor(getModel().isRollover() ? rojoPrime.darker() : rojoPrime);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        estilizarBotonEmergente(btnGuardar);
-
-        // BOTÓN CANCELAR
-
-        btnCancelar = new JButton("CANCELAR") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color grisOscuro = new Color(70, 70, 70);
-                g2.setColor(getModel().isRollover() ? grisOscuro.darker() : grisOscuro);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        estilizarBotonEmergente(btnCancelar);
+        btnGuardar = crearBotonEstilizado(modoEdicion ? "ACTUALIZAR" : "GUARDAR", new Color(180, 0, 0));
+        btnCancelar = crearBotonEstilizado("CANCELAR", new Color(70, 70, 70));
 
         btnGuardar.addActionListener(e -> guardar());
         btnCancelar.addActionListener(e -> dispose());
 
-        panelBotones.add(btnGuardar);
         panelBotones.add(btnCancelar);
-        add(panelBotones, BorderLayout.SOUTH);
+        panelBotones.add(btnGuardar);
 
-        setResizable(false);
-        pack();
-        setLocationRelativeTo(parent);
-    }
-
-    private void estilizarBotonEmergente(JButton btn) {
-        btn.setPreferredSize(new Dimension(160, 40));
-        btn.setForeground(Color.WHITE);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
+        panelPrincipal.add(lblTitulo, BorderLayout.NORTH);
+        panelPrincipal.add(panelForm, BorderLayout.CENTER);
+        panelPrincipal.add(panelBotones, BorderLayout.SOUTH);
+        add(panelPrincipal);
     }
 
     private void guardar() {
-
         Frame padre = (Frame) SwingUtilities.getWindowAncestor(this);
 
-        if (txtDni.getText().isEmpty() || txtNombre.getText().isEmpty()) {
-            new DialogoAviso(padre, "⚠ El DNI y el Nombre son obligatorios.").setVisible(true);
+        if (txtDni.getText().isEmpty() || txtNombre.getText().isEmpty() || txtTelefono.getText().isEmpty()) {
+            new DialogoAviso(padre, "⚠ DNI, Nombre y WhatsApp son obligatorios.").setVisible(true);
             return;
         }
 
@@ -145,43 +135,62 @@ public class DialogoNuevoSocio extends JDialog {
             String nom = txtNombre.getText().trim();
             String ape = txtApellido.getText().trim();
             String plan = (String) comboPlan.getSelectedItem();
+            String tel = txtTelefono.getText().trim();
             String venc = txtVencimiento.getText().trim();
 
             boolean exito = modoEdicion ?
-                    socioDAO.editarSocio(dni, nom, ape, plan, venc) :
-                    socioDAO.guardarSocio(dni, nom, ape, plan, venc);
+                    socioDAO.editarSocio(dni, nom, ape, plan, tel, venc) :
+                    socioDAO.guardarSocio(dni, nom, ape, plan, tel, venc);
 
             if (exito) {
-                String titulo = modoEdicion ? "SOCIO ACTUALIZADO" : "SOCIO REGISTRADO";
-                new DialogoExito(padre, titulo, "Los datos de " + nom + " se guardaron correctamente.").setVisible(true);
+                new DialogoExito(padre, "OPERACIÓN EXITOSA", "Socio guardado correctamente.").setVisible(true);
                 dispose();
             } else {
-                // Error de base de datos o DNI duplicado
-                new DialogoAviso(padre, "❌ Error al procesar los datos. Verifica si el DNI ya existe.").setVisible(true);
+                new DialogoAviso(padre, "❌ Error al procesar datos. Verifica el DNI.").setVisible(true);
             }
         } catch (NumberFormatException ex) {
-            // Error de entrada de texto
-            new DialogoAviso(padre, "⚠ Error: El DNI debe ser un número válido.").setVisible(true);
+            new DialogoAviso(padre, "⚠ El DNI debe ser un número válido.").setVisible(true);
         }
     }
 
-    private JLabel crearLabel(String texto, Font font) {
-        JLabel l = new JLabel(texto);
-        l.setForeground(Color.WHITE);
-        l.setFont(font);
+    private JTextField crearTextField() {
+        JTextField t = new JTextField();
+        t.setBackground(new Color(55, 55, 55));
+        t.setForeground(Color.WHITE);
+        t.setCaretColor(Color.WHITE);
+        t.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(80, 80, 80)),
+                BorderFactory.createEmptyBorder(5, 8, 5, 8)
+        ));
+        return t;
+    }
+
+    private JLabel crearLabel(String t, Font f) {
+        JLabel l = new JLabel(t);
+        l.setForeground(Color.GRAY);
+        l.setFont(f);
         return l;
     }
 
-    private JTextField crearTextField() {
-        JTextField t = new JTextField(15);
-        t.setBackground(new Color(50, 50, 50));
-        t.setForeground(Color.WHITE);
-        t.setCaretColor(Color.ORANGE);
-        t.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        t.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(80, 80, 80)),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)
-        ));
-        return t;
+    private JButton crearBotonEstilizado(String t, Color bg) {
+        JButton b = new JButton(t) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? bg.darker() : bg);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        b.setPreferredSize(new Dimension(140, 40));
+        b.setForeground(Color.WHITE);
+        b.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        b.setContentAreaFilled(false);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return b;
     }
 }

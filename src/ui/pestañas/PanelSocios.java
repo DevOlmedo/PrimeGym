@@ -20,6 +20,7 @@ public class PanelSocios extends JPanel {
     private JTextField txtBuscador;
     private SocioDAO socioDAO = new SocioDAO();
     private PagoDAO pagoDAO = new PagoDAO();
+    private JComboBox<String> comboFiltroEstado;
 
     public PanelSocios() {
         setBackground(new Color(30, 30, 30));
@@ -35,10 +36,12 @@ public class PanelSocios extends JPanel {
         titulo.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titulo.setForeground(Color.WHITE);
 
-        // --- BUSCADOR Y BOTÓN (LADO DERECHO) ---
+        // --- BUSCADOR, FILTRO Y BOTÓN ---
 
         JPanel panelDerechoTop = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         panelDerechoTop.setOpaque(false);
+
+        // Configuración del Buscador
 
         txtBuscador = new JTextField();
         txtBuscador.setPreferredSize(new Dimension(250, 35));
@@ -51,8 +54,6 @@ public class PanelSocios extends JPanel {
                 BorderFactory.createLineBorder(new Color(80, 80, 80), 1),
                 BorderFactory.createEmptyBorder(0, 10, 0, 10)
         ));
-
-        // Placeholder dinámico
 
         txtBuscador.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusGained(java.awt.event.FocusEvent evt) {
@@ -69,51 +70,49 @@ public class PanelSocios extends JPanel {
             }
         });
 
+        // Filtro de Estado
+
+        comboFiltroEstado = new JComboBox<>(new String[]{"Todos", "Al Día", "Deudores"});
+        comboFiltroEstado.setPreferredSize(new Dimension(110, 35));
+        comboFiltroEstado.setBackground(new Color(45, 45, 45));
+        comboFiltroEstado.setForeground(Color.WHITE);
+        comboFiltroEstado.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        comboFiltroEstado.addActionListener(e -> aplicarFiltrosCombinados()); // Lógica combinada
+
+
+
+        // Botón de Acciones
+
         JButton btnAcciones = new JButton("ACCIONES ▼") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 Color rojoPrime = new Color(180, 0, 0);
-                if (getModel().isRollover()) {
-                    g2.setColor(rojoPrime.darker());
-                } else {
-                    g2.setColor(rojoPrime);
-                }
-
+                g2.setColor(getModel().isRollover() ? rojoPrime.darker() : rojoPrime);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
-
-        // Configuraciones de estilo adicionales
-
         btnAcciones.setPreferredSize(new Dimension(140, 35));
         btnAcciones.setForeground(Color.WHITE);
         btnAcciones.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnAcciones.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnAcciones.setContentAreaFilled(false); // Necesario para que se vea nuestro diseño redondeado
+        btnAcciones.setContentAreaFilled(false);
         btnAcciones.setBorderPainted(false);
         btnAcciones.setFocusPainted(false);
 
         panelDerechoTop.add(txtBuscador);
+        panelDerechoTop.add(comboFiltroEstado);
         panelDerechoTop.add(btnAcciones);
 
-        // Lógica de filtrado en tiempo real
+        // Lógica de filtrado combinada
 
         txtBuscador.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { filtrar(); }
-            @Override public void removeUpdate(DocumentEvent e) { filtrar(); }
-            @Override public void changedUpdate(DocumentEvent e) { filtrar(); }
-            private void filtrar() {
-                String texto = txtBuscador.getText();
-                if (texto.equals("Buscar por Nombre o DNI...") || texto.trim().isEmpty()) {
-                    sorter.setRowFilter(null);
-                } else {
-                    sorter.setRowFilter(RowFilter.regexFilter("(?i)" + texto));
-                }
-            }
+            @Override public void insertUpdate(DocumentEvent e) { aplicarFiltrosCombinados(); }
+            @Override public void removeUpdate(DocumentEvent e) { aplicarFiltrosCombinados(); }
+            @Override public void changedUpdate(DocumentEvent e) { aplicarFiltrosCombinados(); }
         });
 
         // MENÚ DESPLEGABLE
@@ -136,8 +135,8 @@ public class PanelSocios extends JPanel {
         });
         itemVer.addActionListener(e -> actualizarTabla());
         itemHistorial.addActionListener(e -> abrirHistorialSeleccionado());
-        itemEditar.addActionListener(e -> editarSocioSeleccionado()); // Corregido: Llamada al método
-        itemBaja.addActionListener(e -> eliminarSocioSeleccionado()); // Corregido: Llamada al método
+        itemEditar.addActionListener(e -> editarSocioSeleccionado());
+        itemBaja.addActionListener(e -> eliminarSocioSeleccionado());
 
         panelNorte.add(titulo, BorderLayout.WEST);
         panelNorte.add(panelDerechoTop, BorderLayout.EAST);
@@ -149,7 +148,7 @@ public class PanelSocios extends JPanel {
         panelCuerpo.setOpaque(false);
         panelCuerpo.setBorder(BorderFactory.createEmptyBorder(10, 25, 25, 25));
 
-        modeloTabla = new DefaultTableModel(new String[]{"DNI", "Nombre", "Apellido", "Plan", "Vencimiento", "Estado"}, 0) {
+        modeloTabla = new DefaultTableModel(new String[]{"DNI", "Nombre", "Apellido", "Plan", "WhatsApp", "Vencimiento", "Estado"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
 
@@ -160,7 +159,21 @@ public class PanelSocios extends JPanel {
 
         tablaSocios.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2 && tablaSocios.getSelectedRow() != -1) { abrirHistorialSeleccionado(); }
+                int filaVista = tablaSocios.getSelectedRow();
+                int columna = tablaSocios.columnAtPoint(e.getPoint());
+
+                if (filaVista != -1) {
+                    int filaModelo = tablaSocios.convertRowIndexToModel(filaVista);
+                    if (columna == 4) {
+                        String nombre = modeloTabla.getValueAt(filaModelo, 1).toString();
+                        String telefono = modeloTabla.getValueAt(filaModelo, 4).toString();
+                        Frame f = (Frame) SwingUtilities.getWindowAncestor(PanelSocios.this);
+                        new DialogoEnvioWhatsapp(f, "MENSAJE A SOCIO",
+                                "Hola " + nombre + ", te contactamos de PrimeGym...", telefono).setVisible(true);
+                    } else if (e.getClickCount() == 2) {
+                        abrirHistorialSeleccionado();
+                    }
+                }
             }
         });
 
@@ -171,6 +184,36 @@ public class PanelSocios extends JPanel {
         add(panelCuerpo, BorderLayout.CENTER);
 
         actualizarTabla();
+    }
+
+    private void estilizarCombo(JComboBox combo) {
+        combo.setPreferredSize(new Dimension(120, 35));
+        combo.setBackground(new Color(45, 45, 45));
+        combo.setForeground(Color.WHITE);
+        combo.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        combo.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)));
+    }
+
+    private void aplicarFiltrosCombinados() {
+        String texto = txtBuscador.getText().trim();
+        String estado = (String) comboFiltroEstado.getSelectedItem();
+        java.util.List<RowFilter<Object, Object>> filtros = new java.util.ArrayList<>();
+
+        if (!texto.equals("Buscar por Nombre o DNI...") && !texto.isEmpty()) {
+            filtros.add(RowFilter.regexFilter("(?i)" + texto));
+        }
+
+        if (estado.equals("Al Día")) {
+            filtros.add(RowFilter.regexFilter("^AL DÍA$"));
+        } else if (estado.equals("Deudores")) {
+            filtros.add(RowFilter.regexFilter("^DEUDA$"));
+        }
+
+        if (filtros.isEmpty()) {
+            sorter.setRowFilter(null);
+        } else {
+            sorter.setRowFilter(RowFilter.andFilter(filtros));
+        }
     }
 
     // --- MÉTODOS DE ACCIÓN ---
@@ -202,11 +245,12 @@ public class PanelSocios extends JPanel {
         int filaModelo = tablaSocios.convertRowIndexToModel(filaVista);
 
         Object[] datosSocio = {
-                modeloTabla.getValueAt(filaModelo, 0),
-                modeloTabla.getValueAt(filaModelo, 1),
-                modeloTabla.getValueAt(filaModelo, 2),
-                modeloTabla.getValueAt(filaModelo, 3),
-                modeloTabla.getValueAt(filaModelo, 4)
+                modeloTabla.getValueAt(filaModelo, 0), // DNI
+                modeloTabla.getValueAt(filaModelo, 1), // Nombre
+                modeloTabla.getValueAt(filaModelo, 2), // Apellido
+                modeloTabla.getValueAt(filaModelo, 3), // Plan
+                modeloTabla.getValueAt(filaModelo, 4), // TELÉFONO (Nuevo)
+                modeloTabla.getValueAt(filaModelo, 5)  // Vencimiento
         };
 
         Frame f = (Frame) SwingUtilities.getWindowAncestor(this);
@@ -234,12 +278,9 @@ public class PanelSocios extends JPanel {
 
         if (diag.getRespuesta()) {
             if (socioDAO.eliminarSocio(dni)) {
-                actualizarTabla(); // Refrescamos la lista de socios
-
-                // 5. Éxito: Mostramos el cartel grande con el check verde
+                actualizarTabla();
                 new DialogoExito(f, "BAJA COMPLETADA", "El socio ha sido removido del sistema correctamente.").setVisible(true);
             } else {
-                // Error técnico
                 new DialogoAviso(f, "❌ No se pudo eliminar al socio. Verifica si tiene pagos pendientes vinculados.").setVisible(true);
             }
         }
@@ -254,26 +295,63 @@ public class PanelSocios extends JPanel {
     private void configurarEstiloTabla() {
         tablaSocios.setBackground(new Color(45, 45, 45));
         tablaSocios.setForeground(Color.WHITE);
-        tablaSocios.setRowHeight(35);
-        tablaSocios.setSelectionBackground(new Color(255, 140, 0, 100));
+        tablaSocios.setRowHeight(40); // Altura optimizada para el icono
+        tablaSocios.setSelectionBackground(new Color(180, 0, 0, 80));
         tablaSocios.getTableHeader().setBackground(new Color(60, 60, 60));
         tablaSocios.getTableHeader().setForeground(Color.WHITE);
         tablaSocios.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
 
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
+        DefaultTableCellRenderer customRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+
+                if (column == 4) {
+                    JLabel label = new JLabel();
+                    label.setOpaque(true);
+                    label.setHorizontalAlignment(JLabel.CENTER);
+
+                    if (isSelected) {
+                        label.setBackground(table.getSelectionBackground());
+                        label.setForeground(Color.WHITE);
+                    } else {
+                        label.setBackground(table.getBackground());
+                        label.setForeground(new Color(37, 211, 102)); // Verde WhatsApp
+                    }
+
+                    try {
+
+                        // Carga de la imagen
+
+                        ImageIcon iconoOriginal = new ImageIcon("src/assets/whatsapp.png");
+                        Image imgEscalada = iconoOriginal.getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH);
+                        label.setIcon(new ImageIcon(imgEscalada));
+                        label.setText(" ENVIAR");
+                        label.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                    } catch (Exception e) {
+                        label.setText("ENVIAR");
+                    }
+                    return label;
+                }
+
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setHorizontalAlignment(JLabel.CENTER);
-                if (column == 5) {
-                    if ("DEUDA".equals(value)) { c.setForeground(Color.RED); c.setFont(c.getFont().deriveFont(Font.BOLD)); }
-                    else { c.setForeground(new Color(50, 205, 50)); }
-                } else { c.setForeground(Color.WHITE); }
+
+                if (column == 6) {
+                    if ("DEUDA".equals(value)) {
+                        c.setForeground(Color.RED);
+                        c.setFont(c.getFont().deriveFont(Font.BOLD));
+                    } else {
+                        c.setForeground(new Color(50, 205, 50)); // Verde "Al día"
+                    }
+                } else {
+                    c.setForeground(Color.WHITE);
+                }
                 return c;
             }
         };
+
         for (int i = 0; i < tablaSocios.getColumnCount(); i++) {
-            tablaSocios.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+            tablaSocios.getColumnModel().getColumn(i).setCellRenderer(customRenderer);
         }
     }
 

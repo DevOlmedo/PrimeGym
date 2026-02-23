@@ -1,10 +1,8 @@
 package ui.pestañas;
 
+import util.WhatsappUtil; // Importamos nuestro motor de comunicación
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.net.URI;
 
 public class PanelSoporte extends JPanel {
 
@@ -23,11 +21,13 @@ public class PanelSoporte extends JPanel {
 
         JLabel lblIcono = new JLabel();
         try {
-            ImageIcon iconoOriginal = new ImageIcon("src/assets/soporte_grande.png"); // Usa una imagen real
+            ImageIcon iconoOriginal = new ImageIcon("src/assets/soporte_grande.png");
             Image imgEscalada = iconoOriginal.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
             lblIcono.setIcon(new ImageIcon(imgEscalada));
         } catch (Exception e) {
-            lblIcono.setText("?"); // Fallback seguro
+            lblIcono.setText("🛠");
+            lblIcono.setFont(new Font("Segoe UI", Font.PLAIN, 50));
+            lblIcono.setForeground(new Color(180, 0, 0));
         }
         lblIcono.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -40,7 +40,9 @@ public class PanelSoporte extends JPanel {
 
         // Descripción
 
-        JTextArea txtDesc = new JTextArea("¿Necesitas ayuda con PrimeGym?\nSi el sistema presenta errores o necesitas una nueva función, contacta directamente con tu desarrollador.");
+        JTextArea txtDesc = new JTextArea("¿Necesitas ayuda con PrimeGym?\n" +
+                "Si el sistema presenta errores o necesitas una nueva función, " +
+                "contacta directamente con tu desarrollador.");
         txtDesc.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         txtDesc.setForeground(Color.GRAY);
         txtDesc.setEditable(false);
@@ -48,16 +50,22 @@ public class PanelSoporte extends JPanel {
         txtDesc.setHighlighter(null);
         txtDesc.setAlignmentX(Component.CENTER_ALIGNMENT);
         txtDesc.setMargin(new Insets(20, 0, 20, 0));
+        txtDesc.setLineWrap(true);
+        txtDesc.setWrapStyleWord(true);
 
         // Botón de WhatsApp
 
         JButton btnWhatsapp = crearBotonSoporte("CONTACTAR POR WHATSAPP", new Color(37, 211, 102));
         btnWhatsapp.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btnWhatsapp.addActionListener(e -> abrirEnlaceSoporte());
+        btnWhatsapp.addActionListener(e -> {
+            String telefono = "2617039848"; // Tu contacto real
+            String mensaje = "Hola! Necesito soporte técnico para el sistema PrimeGym.";
+            WhatsappUtil.enviarMensaje(telefono, mensaje); // Uso del Util centralizado
+        });
 
-        // Información adicional
+        // Información de versión
 
-        JLabel lblVersion = new JLabel("Versión del Sistema: 2.0.1 - PrimeGym Gold Edition");
+        JLabel lblVersion = new JLabel("Versión del Sistema: 2.1.0 - PrimeGym Gold Edition");
         lblVersion.setFont(new Font("Segoe UI", Font.ITALIC, 12));
         lblVersion.setForeground(new Color(80, 80, 80));
         lblVersion.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -91,8 +99,8 @@ public class PanelSoporte extends JPanel {
                 super.paintComponent(g);
             }
         };
-        btn.setPreferredSize(new Dimension(300, 50));
-        btn.setMaximumSize(new Dimension(300, 50));
+        btn.setPreferredSize(new Dimension(320, 55));
+        btn.setMaximumSize(new Dimension(320, 55));
         btn.setForeground(Color.WHITE);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btn.setContentAreaFilled(false);
@@ -100,18 +108,5 @@ public class PanelSoporte extends JPanel {
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return btn;
-    }
-
-    private void abrirEnlaceSoporte() {
-        try {
-
-            String telefono = "2617039848";
-            String mensaje = "Hola! Necesito soporte técnico para el sistema PrimeGym del local.";
-            String url = "https://wa.me/" + telefono + "?text=" + mensaje.replace(" ", "%20");
-
-            Desktop.getDesktop().browse(new URI(url));
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "No se pudo abrir el navegador.");
-        }
     }
 }

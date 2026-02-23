@@ -32,18 +32,22 @@ public class SocioDAO {
         LocalDate hoy = LocalDate.now();
 
         for (Object[] socio : todos) {
-            if ("DEUDA".equals(socio[5])) {
-                String vencimientoStr = (String) socio[4];
+            if ("DEUDA".equals(socio[6])) {
+                String vencimientoStr = (String) socio[5];
                 long diasAtraso = 0;
                 try {
                     LocalDate fechaVenc = LocalDate.parse(vencimientoStr, formateador);
                     diasAtraso = ChronoUnit.DAYS.between(fechaVenc, hoy);
                 } catch (Exception e) {}
+
+                // Estructura para la tabla: Nombre, DNI, Vencimiento, Atraso, Teléfono
+
                 morosos.add(new Object[]{
                         socio[1] + " " + socio[2],
                         socio[0],
                         vencimientoStr,
-                        diasAtraso + " días"
+                        diasAtraso + " días",
+                        socio[4] // Teléfono recuperado
                 });
             }
         }
@@ -55,7 +59,7 @@ public class SocioDAO {
         int deudores = 0;
         List<Object[]> todos = obtenerTodos();
         for (Object[] socio : todos) {
-            String estado = (String) socio[5];
+            String estado = (String) socio[6];
             if ("AL DÍA".equals(estado)) { activos++; }
             else if ("DEUDA".equals(estado)) { deudores++; }
         }
@@ -103,30 +107,34 @@ public class SocioDAO {
                         LocalDate fechaVencimiento = LocalDate.parse(vencimientoStr, formateador);
                         if (hoy.isAfter(fechaVencimiento)) { estadoVisual = "DEUDA"; }
                     } catch (Exception e) { estadoVisual = "ERROR FECHA"; }
-                    return new Object[]{ rs.getInt("dni"), rs.getString("nombre"), rs.getString("apellido"), rs.getString("plan"), vencimientoStr, estadoVisual };
+
+                    return new Object[]{
+                            rs.getInt("dni"), rs.getString("nombre"), rs.getString("apellido"),
+                            rs.getString("plan"), rs.getString("telefono"), vencimientoStr, estadoVisual
+                    };
                 }
             }
         } catch (SQLException e) { }
         return null;
     }
 
-    public boolean guardarSocio(int dni, String nombre, String apellido, String plan, String vencimiento) {
-        String sql = "INSERT INTO socios(dni, nombre, apellido, plan, vencimiento, cuota_al_dia) VALUES(?,?,?,?,?,1)";
+    public boolean guardarSocio(int dni, String nombre, String apellido, String plan, String telefono, String vencimiento) {
+        String sql = "INSERT INTO socios(dni, nombre, apellido, plan, telefono, vencimiento, cuota_al_dia) VALUES(?,?,?,?,?,?,1)";
         try (Connection conn = ConexionDB.conectar();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, dni); pstmt.setString(2, nombre); pstmt.setString(3, apellido);
-            pstmt.setString(4, plan); pstmt.setString(5, vencimiento);
+            pstmt.setString(4, plan); pstmt.setString(5, telefono); pstmt.setString(6, vencimiento);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) { return false; }
     }
 
-    public boolean editarSocio(int dni, String nombre, String apellido, String plan, String vencimiento) {
-        String sql = "UPDATE socios SET nombre = ?, apellido = ?, plan = ?, vencimiento = ? WHERE dni = ?";
+    public boolean editarSocio(int dni, String nombre, String apellido, String plan, String telefono, String vencimiento) {
+        String sql = "UPDATE socios SET nombre = ?, apellido = ?, plan = ?, telefono = ?, vencimiento = ? WHERE dni = ?";
         try (Connection conn = ConexionDB.conectar();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, nombre); pstmt.setString(2, apellido);
-            pstmt.setString(3, plan); pstmt.setString(4, vencimiento);
-            pstmt.setInt(5, dni);
+            pstmt.setString(3, plan); pstmt.setString(4, telefono);
+            pstmt.setString(5, vencimiento); pstmt.setInt(6, dni);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) { return false; }
     }
@@ -154,7 +162,11 @@ public class SocioDAO {
                     LocalDate fechaVencimiento = LocalDate.parse(vencimientoStr, formateador);
                     if (hoy.isAfter(fechaVencimiento)) { estadoVisual = "DEUDA"; }
                 } catch (Exception e) { estadoVisual = "ERROR FECHA"; }
-                lista.add(new Object[]{ rs.getInt("dni"), rs.getString("nombre"), rs.getString("apellido"), rs.getString("plan"), vencimientoStr, estadoVisual });
+
+                lista.add(new Object[]{
+                        rs.getInt("dni"), rs.getString("nombre"), rs.getString("apellido"),
+                        rs.getString("plan"), rs.getString("telefono"), vencimientoStr, estadoVisual
+                });
             }
         } catch (SQLException e) { }
         return lista;
